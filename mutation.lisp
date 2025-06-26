@@ -76,8 +76,7 @@
                 collect (if (= i instr-idx) new-instr instr))))))
 
 (defun mutate-instruction (genotype experiment)
-  ;(let* ((choice-of-mutation (random-choice '(destination operator args)))
-  (let* ((choice-of-mutation (random-choice '(args)))
+  (let* ((choice-of-mutation (random-choice '(destination operator args)))
          (target (random (length genotype)))
          (old-instruction (nth target genotype))
          (new-instruction
@@ -137,7 +136,6 @@
         (mutate-constant genotype experiment)
         genotype)))
     
-
                                         ; A Stephen Kelly approach to Mutation
 
 (defun mutate (genotype experiment)

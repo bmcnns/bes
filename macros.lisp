@@ -6,6 +6,12 @@
                 `(,form ,acc))) ; if just a symbol: (f acc)
           forms
           :initial-value x))
+
+(defmacro symbols (prefix from start to end)
+  `(list ,@(loop for i from start to end
+                 collect `(intern ,(format nil "~A~D" prefix i)))))
+
+
                                         ; Our minimalist unit-testing library
 (defvar *test-name* nil)
 
@@ -34,14 +40,18 @@
   result)
 
 (defmacro check-frequency ((n target threshold) &body body)
-  (let ((successes (gensym "OCCURRENCES"))
+  (let ((occurrences (gensym "OCCURRENCES"))
         (trial (gensym "TRIAL"))
-        (proportion (gensym "PROPORTION")))
-    `(let ((,successes 0))
+        (proportion (gensym "PROPORTION"))
+        (result (gensym "RESULT")))
+    `(let ((,occurrences 0))
        (dotimes (,trial ,n)
          (when (progn ,@body)
            (incf ,occurrences)))
-       (let ((,proportion (/ ,occurrences ,n)))
-         (format t "~&[~A/~A trials = ~,3F] ~a~%" ,occurrences ,n ,proportion ',body)
-         (<= (abs (- ,proportion ,target)) ,threshold)))))
+       (let* ((,proportion (/ ,occurrences ,n))
+             (,result (<= (abs (- ,proportion ,target)) ,threshold)))
+         (format t "~:[FAIL~;pass~]... ~A [~A/~A] (~,2f) ~A~%" ,result *test-name* ,occurrences ,n ,proportion ',body)
+         ,result))))
 
+
+(load "mutation.tests.lisp")

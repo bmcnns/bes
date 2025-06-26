@@ -26,9 +26,9 @@
 (defparameter Hopper-v5
   (make-experiment
    :instruction-set (make-instruction-set 'ADD 'SUB 'MUL 'DIV 'SIN 'COS 'LOG 'EXP)
-   :registers '(R1 R2 R3 R4 R5 R6 R7 R8 R9 R10) 
-   :observations '(OBS1 OBS2 OBS3 OBS4 OBS5 OBS6)
-   :output-registers '(R1 R2 R3)
+   :registers (symbols R from 1 to 11) 
+   :observations (symbols OBS from 1 to 11)
+   :output-registers (symbols R from 1 to 3)
    :constant-range '(-10.0 10.0)
    ; search
    :population-size 1000

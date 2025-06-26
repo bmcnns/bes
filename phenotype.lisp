@@ -22,8 +22,14 @@
        ,@(mapcar #'translate-instruction genotype)
       registers)))
 
-(defun evaluate (pheno observations experiment)
+(defun evaluate-once (pheno obs experiment)
   (let* ((num-registers (length (experiment-registers experiment)))
          (registers (zeros num-registers))
-         (obs-array (list->vector observations)))
+         (obs-array (list->vector obs)))
     (funcall pheno registers obs-array)))
+
+(defun evaluate (pheno observations experiment)
+  (if (and (listp observations) (listp (first observations)))
+      (mapcar (lambda (obs) (evaluate-once pheno obs experiment))
+              observations)
+      (evaluate-once pheno observations experiment)))

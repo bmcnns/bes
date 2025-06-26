@@ -68,3 +68,5 @@
                 (cos (* 2 pi u2)))))
     (+ mean (* std z0))))
 
+(defun zeros (n)
+  (make-list n :initial-element 0.0))

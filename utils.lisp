@@ -69,4 +69,9 @@
     (+ mean (* std z0))))
 
 (defun zeros (n)
-  (make-list n :initial-element 0.0))
+  (make-array n :element-type 'single-float :initial-element 0.0))
+
+(defun list->vector (lst)
+  (make-array (length lst)
+              :element-type 'single-float
+              :initial-contents (mapcar #'(lambda (x) (coerce x 'single-float)) lst)))

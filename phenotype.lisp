@@ -12,9 +12,18 @@
 
 (defun translate-instruction (instr)
   (destructuring-bind (dest op &rest args) instr
-      `(setf ,dest (,(lookup-fn op) ,@args))))
+      `(setf ,(parse-symbol dest) (,(lookup-fn op) ,@(mapcar #'parse-symbol args)))))
 
 (defun phenotype (genotype)
-  `(lambda (registers observations)
-     ,@(mapcar #'translate-instruction genotype)
-     registers))
+  (compile nil
+    `(lambda (registers observations)
+       (declare (optimize (speed 3) (safety 0) (debug 0))
+                (type (simple-array single-float (*)) registers observations))
+       ,@(mapcar #'translate-instruction genotype)
+      registers)))
+
+(defun evaluate (pheno observations experiment)
+  (let* ((num-registers (length (experiment-registers experiment)))
+         (registers (zeros num-registers))
+         (obs-array (list->vector observations)))
+    (funcall pheno registers obs-array)))

@@ -53,5 +53,41 @@
          (format t "~:[FAIL~;pass~]... ~A [~A/~A] (~,2f) ~A~%" ,result *test-name* ,occurrences ,n ,proportion ',body)
          ,result))))
 
+                                        ; Multithreading macros at the population level
 
-(load "mutation.tests.lisp")
+(defun map-population (fn population &key parallel)
+  (if parallel
+      (lparallel:pmap fn population)
+      (mapcar fn population)))
+
+(defmacro with-population (population threads &body forms)
+  (let ((pop-var (gensym "POP")))
+    `(let ((,pop-var ,population))
+       (if (> ,threads 1)
+           (progn
+             (unless (find-package 'lparallel)
+               (ql:quickload :lparallel))
+             (setf lparallel:*kernel* (lparallel:make-kernel ,threads))
+             (unwind-protect
+                  (progn
+                    ,@(loop for form in forms
+                            collect
+                            `(setf ,pop-var
+                                   (lparallel:pmap 'list (lambda (individual) ,form) ,pop-var))))
+               (lparallel:end-kernel :wait t)))
+           (progn
+             ,@(loop for form in forms
+                     collect
+                     `(setf ,pop-var
+                            (mapcar (lambda (individual) ,form) ,pop-var)))))
+       ,pop-var)))
+
+
+                                        ; Utility macro
+(defmacro wall-clock-time (&body body)
+  `(let ((start-time (get-internal-real-time)))
+     (multiple-value-prog1
+         (progn ,@body)
+       (let ((elapsed (/ (- (get-internal-real-time) start-time)
+                            internal-time-units-per-second)))
+         (format t "~&Wall clock time: ~,4F seconds~%" elapsed)))))

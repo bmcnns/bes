@@ -1,8 +1,11 @@
 (defstruct experiment
+  dataset
+  batch-size
   instruction-set
   registers
   observations
   output-registers
+  fitness
   constant-range
   ; search
   population-size
@@ -23,12 +26,19 @@
   constant-mutation-std
   maximum-instruction-count)
 
-(defparameter Hopper-v5
-  (make-experiment
+(defmacro defexperiment (name &body properties)
+  `(defparameter ,name
+     (make-experiment ,@properties)))
+
+(defdataset *Hopper-Expert-v5*)
+
+(defexperiment Hopper-v5
+   :batch-size 1000
    :instruction-set (make-instruction-set 'ADD 'SUB 'MUL 'DIV 'SIN 'COS 'LOG 'EXP)
    :registers (symbols R from 1 to 11) 
    :observations (symbols OBS from 1 to 11)
    :output-registers (symbols R from 1 to 3)
+   :fitness 'mean-squared-error
    :constant-range '(-10.0 10.0)
    ; search
    :population-size 1000
@@ -47,5 +57,4 @@
    :delete-instruction-probability 0.5
    :swap-instruction-probability 0.2
    :constant-mutation-std 0.5
-   :maximum-instruction-count 256))
-
+   :maximum-instruction-count 256)

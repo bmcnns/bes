@@ -14,22 +14,22 @@
   (destructuring-bind (dest op &rest args) instr
       `(setf ,(parse-symbol dest) (,(lookup-fn op) ,@(mapcar #'parse-symbol args)))))
 
-(defun phenotype (genotype)
-  (compile nil
-    `(lambda (registers observations)
-       (declare (optimize (speed 3) (safety 0) (debug 0))
-                (type (simple-array single-float (*)) registers observations))
-       ,@(mapcar #'translate-instruction genotype)
-      registers)))
+(defun convert-to-phenotype (genotype experiment)
+  (let ((fn
+          (compile nil
+            `(lambda (registers observations)
+               (declare (optimize (speed 3) (safety 0) (debug 0))
+                        (type (simple-array single-float (*)) registers observations))
+               ,@(mapcar #'translate-instruction genotype)
+               registers))))
+    (lambda (obs)
+      (let* ((num-registers (length (experiment-registers experiment)))
+             (registers (zeros num-registers)))
+        (if (and (listp obs) (listp (first obs))) ; batched
+            (mapcar (lambda (o)
+                      (funcall fn (zeros num-registers) (list->vector o)))
+                    obs)
+            (funcall fn registers (list->vector obs)))))))
 
-(defun evaluate-once (pheno obs experiment)
-  (let* ((num-registers (length (experiment-registers experiment)))
-         (registers (zeros num-registers))
-         (obs-array (list->vector obs)))
-    (funcall pheno registers obs-array)))
-
-(defun evaluate (pheno observations experiment)
-  (if (and (listp observations) (listp (first observations)))
-      (mapcar (lambda (obs) (evaluate-once pheno obs experiment))
-              observations)
-      (evaluate-once pheno observations experiment)))
+(defun phenotype (genotype experiment observations)
+  (funcall (convert-to-phenotype genotype experiment) observations))

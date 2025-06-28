@@ -1,0 +1,5 @@
+(defun mean-squared-error (y-predicted y-truth)
+  (let* ((squared-errors (mapcar (lambda (y1 y2) (expt (- y1 y2) 2)) y-predicted y-truth))
+        (sum-squared-errors (reduce #'+ squared-errors))
+         (mean-squared-error (/ sum-squared-errors (length squared-errors))))
+    mean-squared-error))

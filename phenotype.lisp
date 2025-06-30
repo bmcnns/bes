@@ -14,15 +14,19 @@
   (destructuring-bind (dest op &rest args) instr
       `(setf ,(parse-symbol dest) (,(lookup-fn op) ,@(mapcar #'parse-symbol args)))))
 
-(defun convert-to-phenotype (genotype experiment)
-  (let ((fn
-          (compile nil
-            `(lambda (registers observations)
-               (declare (optimize (speed 3) (safety 0) (debug 0))
-                        (type (simple-array single-float (*)) registers observations)
-                        (ignorable observations))
-               ,@(mapcar #'translate-instruction genotype)
-               (coerce registers 'list)))))
+(defun convert-to-phenotype (genotype experiment &key show-all-registers)
+  (let* ((output-registers (experiment-output-registers experiment))
+         (return-expr (if show-all-registers
+                        `(coerce registers 'list)
+                        `(list ,@(mapcar #'parse-symbol output-registers))))
+         (fn
+           (compile nil
+                    `(lambda (registers observations)
+                       (declare (optimize (speed 3) (safety 0) (debug 0))
+                                (type (simple-array single-float (*)) registers observations)
+                                (ignorable observations))
+                       ,@(mapcar #'translate-instruction genotype)
+                       ,return-expr))))
     (lambda (obs)
       (let* ((num-registers (length (experiment-registers experiment)))
              (registers (zeros num-registers)))
@@ -32,5 +36,5 @@
                     obs)
             (funcall fn registers (list->vector obs)))))))
 
-(defun phenotype (genotype experiment observations)
-  (funcall (convert-to-phenotype genotype experiment) observations))
+(defun phenotype (genotype experiment observations &key show-all-registers)
+  (funcall (convert-to-phenotype genotype experiment :show-all-registers show-all-registers) observations))

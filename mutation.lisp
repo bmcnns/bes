@@ -91,7 +91,7 @@
                         collect (if (= i 1) (mutate-operator x experiment) x)))
 
                  ((equal choice-of-mutation 'args)
-                  (let* ((arg-index (1- (random-range 2 (length old-instruction))))
+                  (let* ((arg-index (random-range 2 (length old-instruction)))
                          (old-arg (nth arg-index old-instruction))
                          (new-arg (mutate-operand old-arg experiment)))
                     (loop for x in old-instruction

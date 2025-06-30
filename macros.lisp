@@ -91,3 +91,31 @@
        (let ((elapsed (/ (- (get-internal-real-time) start-time)
                             internal-time-units-per-second)))
          (format t "~&Wall clock time: ~,4F seconds~%" elapsed)))))
+
+(defmacro defpopulation (name size experiment)
+  `(defparameter ,name (loop repeat ,size
+                             collect (new-individual ,experiment))))
+
+(defmacro no-result (&body body)
+  `(progn ,@body nil))
+
+                                        ; Prevent overflows when evaluating programs
+
+(defparameter *fp-max* 1e10)
+(defparameter *fp-min* -1e10)
+
+(defun clamp (x &optional (min *fp-min*) (max *fp-max*))
+  (cond
+    ((not (realp x)) 0.0)
+    ((> x max) max)
+    ((< x min) min)
+    (t x)))
+
+(defmacro safe-wrapper (fn)
+  `(lambda (&rest args)
+     (clamp (apply ,fn args))))
+
+(defmacro def-safe-operator (name fn arity)
+  (let ((params (loop for i from 1 to arity collect (gensym "ARG"))))
+    `(defun ,name ,params
+       (clamp (,fn ,@params)))))

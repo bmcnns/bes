@@ -1,15 +1,33 @@
 (defun analytic-quotient (a b)
   (/ a (sqrt (+ 1 (* b b)))))
 
+(defun protected-log (x)
+  (if (= x 0.0)
+      0.0
+      (log x)))
+
+(defun protected-exp (x)
+  (exp (clamp x -100 55)))
+      
+(def-safe-operator safe-add + 2)
+(def-safe-operator safe-mul * 2)
+(def-safe-operator safe-div analytic-quotient 2)
+(def-safe-operator safe-sub - 2)
+(def-safe-operator safe-sin sin 1)
+(def-safe-operator safe-cos cos 1)
+(def-safe-operator safe-log protected-log 1)
+(def-safe-operator safe-exp protected-exp 1)
+
+
 (defparameter *instruction-library*
-  '((ADD . (:arity 2 :fn +))
-    (MUL . (:arity 2 :fn *))
-    (DIV . (:arity 2 :fn analytic-quotient))
-    (SUB . (:arity 2 :fn -))
-    (SIN . (:arity 1 :fn sin))
-    (COS . (:arity 1 :fn cos))
-    (LOG . (:arity 1 :fn log))
-    (EXP . (:arity 1 :fn exp))))
+  '((ADD . (:arity 2 :fn safe-add))
+    (MUL . (:arity 2 :fn safe-mul))
+    (DIV . (:arity 2 :fn safe-div))
+    (SUB . (:arity 2 :fn safe-sub))
+    (SIN . (:arity 1 :fn safe-sin))
+    (COS . (:arity 1 :fn safe-cos))
+    (LOG . (:arity 1 :fn safe-log))
+    (EXP . (:arity 1 :fn safe-exp))))
 
 (defun lookup-instruction (name)
   (or (assoc name *instruction-library*)

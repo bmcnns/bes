@@ -19,9 +19,10 @@
           (compile nil
             `(lambda (registers observations)
                (declare (optimize (speed 3) (safety 0) (debug 0))
-                        (type (simple-array single-float (*)) registers observations))
+                        (type (simple-array single-float (*)) registers observations)
+                        (ignorable observations))
                ,@(mapcar #'translate-instruction genotype)
-               registers))))
+               (coerce registers 'list)))))
     (lambda (obs)
       (let* ((num-registers (length (experiment-registers experiment)))
              (registers (zeros num-registers)))

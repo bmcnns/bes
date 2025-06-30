@@ -75,3 +75,12 @@
   (make-array (length lst)
               :element-type 'single-float
               :initial-contents (mapcar #'(lambda (x) (coerce x 'single-float)) lst)))
+
+(defun argmax (seq fn)
+  (let ((best (first seq))
+        (best-val (funcall fn (first seq))))
+    (dolist (item (rest seq) best)
+      (let ((val (funcall fn item)))
+        (when (> val best-val)
+          (setf best item
+                best-val val))))))

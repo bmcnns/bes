@@ -7,6 +7,10 @@
   output-registers
   fitness
   constant-range
+  ;; selection
+  tournament-size
+  ;; performance 
+  num-threads
   ; search
   population-size
   generations
@@ -38,14 +42,18 @@
    :registers (symbols R from 1 to 11) 
    :observations (symbols OBS from 1 to 11)
    :output-registers (symbols R from 1 to 3)
-   :fitness 'mean-squared-error
+   :fitness 'negative-mean-squared-error
    :constant-range '(-10.0 10.0)
+   ;; selection
+   :tournament-size 4
+   ;; performance
+   :num-threads 8
    ; search
    :population-size 1000
    :generations 10
    ; initialization 
-   :minimum-program-length 2
-   :maximum-program-length 6
+   :minimum-program-length 8
+   :maximum-program-length 128
    :observation-probability 0.2
    :constant-probability 0.2
    ;; mutation

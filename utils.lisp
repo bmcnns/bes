@@ -84,3 +84,6 @@
         (when (> val best-val)
           (setf best item
                 best-val val))))))
+
+(defun column (matrix index)
+  (mapcar (lambda (row) (nth index row)) matrix))

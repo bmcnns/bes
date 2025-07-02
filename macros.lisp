@@ -119,3 +119,37 @@
   (let ((params (loop for i from 1 to arity collect (gensym "ARG"))))
     `(defun ,name ,params
        (clamp (,fn ,@params)))))
+
+                                        ; Plotting
+
+(defmacro gnuplot (basename &body body)
+  (let ((plt-path (gensym "PLT"))
+        (stream (gensym "STREAM"))
+        (output-path (format nil "figures/~A.png" basename))
+        (data-entries '())
+        (command-lines '()))
+    
+    (dolist (form body)
+      (if (and (consp form) (eq (first form) :data))
+          (destructuring-bind (_ name rows-sym) form
+            ;; rows-sym is now a *symbol*, evaluated at runtime
+            (push
+             `(progn
+                (format ,stream "$~A << EOD~%" ,name)
+                (dolist (row ,rows-sym)
+                  (format ,stream "~{~A~^ ~}~%" row))
+                (format ,stream "EOD~%"))
+             data-entries))
+          ;; Gnuplot command strings
+          (push `(format ,stream "~A~%" ,form) command-lines)))
+
+    `(progn
+       (let* ((,plt-path (format nil "/tmp/~A.gnuplot" ,basename))
+              (,stream (open ,plt-path :direction :output :if-exists :supersede)))
+         (unwind-protect
+             (progn
+               ,@(nreverse data-entries)
+               ,@(nreverse command-lines))
+           (close ,stream))
+         (uiop:run-program (list "gnuplot" ,plt-path)))
+       ,output-path)))

@@ -10,6 +10,7 @@
 (load "~/Repos/bes/mutation.lisp")
 (load "~/Repos/bes/mutation.tests.lisp")
 (load "~/Repos/bes/fitness.lisp")
+(load "~/Repos/bes/selection.lisp")
 
 (defun evolutionary-loop (experiment dataset population generation)
   (if (>= generation (experiment-generations experiment))

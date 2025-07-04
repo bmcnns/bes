@@ -5,7 +5,7 @@
   registers
   observations
   output-registers
-  fitness
+  objectives
   constant-range
   ;; selection
   tournament-size
@@ -42,7 +42,7 @@
    :registers (symbols R from 1 to 11) 
    :observations (symbols OBS from 1 to 11)
    :output-registers (symbols R from 1 to 3)
-   :fitness 'negative-mean-squared-error
+   :objectives `((minimize MSE) (minimize complexity))
    :constant-range '(-10.0 10.0)
    ;; selection
    :tournament-size 4

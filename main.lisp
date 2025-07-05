@@ -1,4 +1,6 @@
 (ql:quickload :lparallel)
+(ql:quickload :py4cl)
+(setf py4cl:*python-command* "/usr/bin/python3")
 (load "~/Repos/bes/utils.lisp")
 (load "~/Repos/bes/genotype.lisp")
 (load "~/Repos/bes/macros.lisp")
@@ -11,6 +13,7 @@
 (load "~/Repos/bes/mutation.tests.lisp")
 (load "~/Repos/bes/fitness.lisp")
 (load "~/Repos/bes/selection.lisp")
+(load "~/Repos/bes/plotting.lisp")
 
 (defun evolutionary-loop (experiment dataset population generation)
   (if (>= generation (experiment-generations experiment))

@@ -1,28 +1,37 @@
-(defun plot-residuals (x y pred)
-  (let ((num-x-dimensions (length (first x)))
-        (num-y-dimensions (length (first y))))
-    (loop for x-dim from 0 below num-x-dimensions do
-      (loop for y-dim from 0 below num-y-dimensions do
-        (let* ((x-col (column x x-dim))
-               (y-col (column y y-dim))
-               (pred-col (column pred y-dim))
-               (obs-name (format nil "OBS~A" (1+ x-dim)))
-               (action-name (format nil "ACTION~A" (1+ y-dim)))
-               (basename (format nil "RESIDUAL-~A-~A" obs-name action-name))
-               (rows (loop for x-i in x-col
-                           for y-i in y-col
-                           for p-i in pred-col
-                           collect (list x-i y-i p-i))))
-          (gnuplot basename
-            (:data "data" rows)
-            "reset"
-            "set terminal pngcairo size 800,600 enhanced font 'Arial,10'"
-            (format nil "set output 'figures/~A.png'" basename)
-            (format nil "set xlabel '~A'" obs-name)
-            (format nil "set ylabel '~A'" action-name)
-            "set grid"
-            "set key outside"
-            "set style line 1 lt 1 lw 2 lc rgb 'blue'"
-            "set style line 2 lt 1 lw 2 lc rgb 'red'"
-            "plot $data using 1:2 with linespoints ls 1 title 'Truth', \\"
-            "     $data using 1:3 with linespoints ls 2 title 'Predicted'"))))))
+(py4cl:import-module "matplotlib.pyplot" :as "plt")
+
+(defun plot-residuals (observations actions predictions)
+  """ Iterate through each observation, action, prediction triple and plot """
+  (loop for i from 0 below (length (car observations)) do
+    (loop for j from 0 below (length (car actions)) do
+      (let* ((observations-i (column observations i))
+             (actions-j (column actions j))
+             (predictions-j (column predictions j)))
+        (plt:plot observations-i actions-j :label "TRUTH" :color "blue" :marker "+")
+        (plt:plot observations-i predictions-j :label "PREDICTION" :color "red" :marker "+")
+        (loop for x in observations-i
+              for y1 in predictions-j
+              for y2 in actions-j do
+                (plt:plot (list x x) (list y1 y2)
+                          :color "gray" :linestyle ":" :linewidth 1.0))
+        (plt:xlabel (format nil "OBS~A" (1+ j)))
+        (plt:ylabel (format nil "ACTION~A" (1+ i)))
+        (plt:legend)
+        (plt:show)))))
+
+(defun plot-pareto-front (pareto-front)
+  (let ((point-labels (column pareto-front 0))
+        (x (column pareto-front 1))
+        (y (column pareto-front 2)))
+    (loop for xi in x
+          for yi in y
+          for label in point-labels do
+            (plt:text xi yi (symbol-name label)
+                      :fontsize 10
+                      :ha "left"
+                      :va "bottom"))
+    (plt:scatter x y :color "blue")
+    (plt:xlabel "Complexity")
+    (plt:ylabel "Error")
+    (plt:grid)
+    (plt:show)))

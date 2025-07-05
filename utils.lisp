@@ -1,3 +1,5 @@
+(in-package :bes)
+
 (defun random-choice (list)
   (nth (random (length list)) list))
 

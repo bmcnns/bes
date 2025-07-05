@@ -1,3 +1,5 @@
+(in-package :bes)
+
 (defun parse-symbol (sym)
   (cond
     ((symbolp sym)

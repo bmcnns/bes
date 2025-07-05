@@ -1,3 +1,5 @@
+(in-package :bes)
+
                                         ; Macros for data loading
 (defmacro defdataset (name)
   (let* ((dataset-name (string-trim "*" (symbol-name name)))

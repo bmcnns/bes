@@ -1,3 +1,5 @@
+(in-package :bes)
+
 (py4cl:import-module "matplotlib.pyplot" :as "plt")
 
 (defun plot-residuals (observations actions predictions)

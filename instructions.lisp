@@ -1,3 +1,5 @@
+(in-package :bes)
+
 (defun analytic-quotient (a b)
   (/ a (sqrt (+ 1 (* b b)))))
 

@@ -1,3 +1,5 @@
+(in-package :bes)
+
 (defun random-input (experiment)
   (if (< (random 1.0) (experiment-observation-probability experiment))
       (random-observation experiment)

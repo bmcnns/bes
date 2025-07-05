@@ -1,3 +1,4 @@
+(in-package :bes)
 
 (defun mean-squared-error (y-predicted y-truth)
   (if (numberp (first y-predicted))

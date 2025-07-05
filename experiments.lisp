@@ -1,3 +1,5 @@
+(in-package :bes)
+
 (defstruct experiment
   dataset
   batch-size

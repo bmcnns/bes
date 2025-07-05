@@ -1,3 +1,5 @@
+(in-package :bes)
+
                                         ; Fitness metrics
 
 (defmacro minimize (fn)

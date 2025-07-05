@@ -1,3 +1,5 @@
+(in-package :bes)
+
 (defmacro -> (x &rest forms)
   "Thread X through FORMS. Each form receives X as its first argument."
   (reduce (lambda (acc form)

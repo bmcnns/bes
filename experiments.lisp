@@ -1,7 +1,12 @@
 (in-package :bes)
 
 (defstruct experiment
-  dataset
+  "An EXPERIMENT struct stores the full set of hyperparameters for evolutionary search.
+
+   Fields include: batch size, instruction set, number of registers, population settings,
+   initialization and mutation probabilities, and performance configuration (e.g., threads).
+
+   This struct is intended to be used with `defexperiment` for defining reusable configurations."
   batch-size
   instruction-set
   registers
@@ -33,36 +38,16 @@
   maximum-instruction-count)
 
 (defmacro defexperiment (name &body properties)
+  "Define a global variable NAME bound to an EXPERIMENT initialized with keyword arguments.
+   Each keyword in PROPERTIES should correspond to a slot in the EXPERIMENT struct.
+
+   Example:
+     (defexperiment *Hopper-v5*
+        :batch-size 1000
+        :population-size 1000
+        :generations 1000
+        :registers 8
+        :add-instruction-probability 1.0)
+        ...)"
   `(defparameter ,name
      (make-experiment ,@properties)))
-
-(defexperiment Hopper-v5
-   :batch-size 1000
-   :instruction-set (make-instruction-set 'ADD 'SUB 'MUL 'DIV 'SIN 'COS 'LOG 'EXP)
-   :registers (symbols R from 1 to 11) 
-   :observations (symbols OBS from 1 to 11)
-   :output-registers (symbols R from 1 to 3)
-   :objectives `((minimize MSE) (minimize complexity))
-   :constant-range '(-10.0 10.0)
-   ;; selection
-   :tournament-size 4
-   ;; performance
-   :num-threads 8
-   ; search
-   :population-size 1000
-   :generations 1000
-   ; initialization 
-   :minimum-program-length 8
-   :maximum-program-length 128
-   :observation-probability 0.5
-   :constant-probability 0.5
-   ;; mutation
-   :mutate-instruction-probability 1.0
-   :mutate-register-probability 0.5
-   :mutate-operation-probability 0.25
-   :mutate-constant-probability 0.25
-   :add-instruction-probability 1.0
-   :delete-instruction-probability 1.0
-   :swap-instruction-probability 1.0
-   :constant-mutation-std 1.0
-   :maximum-instruction-count 256)

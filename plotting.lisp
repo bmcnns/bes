@@ -3,7 +3,13 @@
 (py4cl:import-module "matplotlib.pyplot" :as "plt")
 
 (defun plot-residuals (observations actions predictions)
-  """ Iterate through each observation, action, prediction triple and plot """
+  "Plot residuals between predicted and true actions for each observation-action-prediction triple.
+
+  OBSERVATIONS: A list of lists representing the observed input features.
+  ACTIONS: A list of lists representing the true target values (ground truth).
+  PREDICTIONS: A list of lists representing the predicted values.
+
+  Each subplot compares predictions to true values for a specific observation-action pairing, drawing vertical grey lines to indicate residuals."
   (loop for i from 0 below (length (car observations)) do
     (loop for j from 0 below (length (car actions)) do
       (let* ((observations-i (column observations i))
@@ -22,6 +28,12 @@
         (plt:show)))))
 
 (defun plot-pareto-front (pareto-front)
+  "Plot a 2D Pareto front with labelled points.
+
+   PARETO-FRONT: A list of triples (LABEL COMPLEXITY ERROR), where LABEL is a symbol
+   identifying each solution, and COMPLEXITY and ERROR are numeric values representing objectives.
+
+   Labels are annotated beside each point, and the front is plotted using scatter points."
   (let ((point-labels (column pareto-front 0))
         (x (column pareto-front 1))
         (y (column pareto-front 2)))

@@ -36,8 +36,6 @@
   `(defparameter ,name
      (make-experiment ,@properties)))
 
-(defdataset *Hopper-Expert-v5*)
-
 (defexperiment Hopper-v5
    :batch-size 1000
    :instruction-set (make-instruction-set 'ADD 'SUB 'MUL 'DIV 'SIN 'COS 'LOG 'EXP)

@@ -13,30 +13,31 @@ All data structures and transformations in BES are **immutable** by design.
 
 ## Features
 
-- **Compiled program execution**: Programs are turned into executable Lisp code rather than being interpreted.
-- **LGP architecture**: Register-based instructions using operators like `ADD`, `SUB`, `MUL`, `DIV`, `SIN`, `COS`, etc.
-- **Rich mutation suite**: Includes instruction replacement, operand mutation, insertion/removal, constant perturbation, and more — inspired by TPG mutation flexibility.
-- **Macro-based DSL**: Define experiments and run evaluations using expressive Common Lisp macros.
-- **Minimal unit test framework**: Custom `deftest` and `check` macros support lightweight testing.
+- **Compiled programs** — Individuals are JIT-compiled into native machine code to speed up execution
+- **Safe instructions** — Arithmetic, trigonometric, and protected functions.
+- **Multi-objective support** — NSGA-II for minimizing error & complexity.
+- **Parallel evaluation** — Uses `lparallel` for speed.
+- **Python plotting** — Residuals, Pareto fronts via `matplotlib` and `py4cl`.
 
 ---
 
 ## File Overview
 
-```
-
-bes/
-├── experiments.lisp ; Define experimental configurations and hyperparameters
-├── genotype.lisp ; Genotype (program) data structures
-├── instructions.lisp ; Evaluation of instructions (compiled semantics)
-├── macros.lisp ; Utility macros and DSL for tests/experiments
-├── main.lisp ; Entrypoint and evolutionary loop
-├── mutation.lisp ; All mutation operators (insert, delete, perturb, etc.)
-├── mutation.tests.lisp ; Tests for mutation operators
-├── phenotype.lisp ; Registers, execution, and program compilation
-├── utils.lisp ; General-purpose helpers
-
-```
+| File              | Purpose                                                  |
+|-------------------|----------------------------------------------------------|
+| `instructions.lisp` | Safe op definitions (e.g. `protected-div`, `cos`)        |
+| `genotype.lisp`     | Program representation & random generation               |
+| `mutation.lisp`     | Instruction + structural mutations                       |
+| `evolution.lisp`    | Evolution loop (`evolve`)                                |
+| `dataset.lisp`      | `defdataset` for loading data                            |
+| `experiments.lisp`  | `defexperiment` macro for experiment configuration       |
+| `phenotype.lisp`    | Compilation of programs to executable Lisp functions     |
+| `fitness.lisp`      | Error and complexity objectives                          |
+| `selection.lisp`    | Tournament & NSGA-II selection                           |
+| `hopper.lisp`       | Offline RL example (Hopper dataset)                      |
+| `utils.lisp`        | Helper functions                                         |
+| `package.lisp`      | BES package definition and exports                       |
+| `bes.asd`           | ASDF system definition                                   |
 
 ---
 
@@ -51,18 +52,35 @@ bes/
 ### Running
 
 ```lisp
-(load "main.lisp")
+(defdataset *Minimal-Hopper-Expert-v5*)
 
-(defparameter *exp*
-  (make-experiment
-   :instruction-set (make-instruction-set 'ADD 'SUB 'MUL 'DIV)
-   :registers '(R1 R2 R3 R4)
-   :observations '(OBS1 OBS2 OBS3)
-   :output-registers '(R1)
-   :population-size 500
-   :generations 50))
+(defexperiment *Hopper-v5*
+  :batch-size 1000
+  :instruction-set (make-instruction-set 'ADD 'SUB 'MUL 'DIV 'SIN 'COS 'LOG 'EXP)
+  :registers (symbols R from 1 to 11) 
+  :observations (symbols OBS from 1 to 11)
+  :output-registers (symbols R from 1 to 3)
+  :constant-range '(-10.0 10.0)
+  :objectives `((minimize MSE) (minimize complexity))
+  :tournament-size 4
+  :num-threads 8
+  :population-size 1000
+  :generations 1000
+  :minimum-program-length 8
+  :maximum-program-length 128
+  :observation-probability 0.5
+  :constant-probability 0.5
+  :mutate-instruction-probability 1.0
+  :mutate-register-probability 0.5
+  :mutate-operation-probability 0.25
+  :mutate-constant-probability 0.25
+  :add-instruction-probability 1.0
+  :delete-instruction-probability 1.0
+  :swap-instruction-probability 1.0
+  :constant-mutation-std 1.0
+  :maximum-instruction-count 256)
 
-(run-experiment *exp*)
+(evolve *Hopper-v5* *Minimal-Hopper-Expert-v5*)
 ```
 
 ## References

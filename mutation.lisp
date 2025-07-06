@@ -1,17 +1,31 @@
 (in-package :bes)
 
-;; The micro-mutations
+;;; mutation.lisp
+;;; ------------
+;;; This file defines the mutation operations for a genotype
+;;; including both micro-mutations (e.g., mutations at the instruction level), and
+;;; macro-mutations (e.g., mutations at the genotype level).
+;;;
+;;; The design is inspired by Stephen Kelly's Tangled Program Graph implementation.
+;;; Each mutation is applied independently according to experiment-defined probabilities.
 
 (defun mutate-dest (dest experiment)
+  "Return a randomly chosen destination register that is *not* DEST.
+   Ensures mutations actually change the genotype."
   (let* ((registers (experiment-registers experiment)))
     (random-choice (remove dest registers))))
 
 (defun mutate-operator (operator experiment)
+  "Return a randomly selected opcode with the same arity as OPERATOR,
+   excluding OPERATOR itself."
   (let* ((arity (lookup-arity operator))
          (compatible-operators (instructions-with-arity arity)))
     (random-choice (remove operator compatible-operators))))
 
 (defun mutate-operand (operand experiment)
+  "Randomly mutate OPERAND to either:
+   - A new constant (based on EXPERIMENT's constant probability), or
+   - A new observation variable or register, excluding the original operand."
   (let ((constant-probability (experiment-constant-probability experiment))
         (constant-range (experiment-constant-range experiment)))
     
@@ -19,10 +33,8 @@
         (random-range (first constant-range) (first (last constant-range)))
         (random-choice (remove operand `(,@(experiment-observations experiment) ,@(experiment-registers experiment)))))))
 
-
-;; The macro-mutations
-  
 (defun swap-instructions (genotype)
+  "Randomly swap two instructions in the GENOTYPE."
   (let* ((i (random (length genotype)))
         (j (loop for r = (random (length genotype))
                  until (/= r i)
@@ -35,6 +47,10 @@
                     (t instr)))))
 
 (defun add-instruction (genotype experiment)
+  "Insert a new randomly generated instruction at a random position'
+   in GENOTYPE. The instruction is generated based on EXPERIMENT's configuration.
+   There is *no* check that the genotype will remain under the maximum length.
+   Instead, this check is performed externally in 'maybe-add-instruction'."
   (let* ((i (random (1+ (length genotype))))
          (new-instr (random-instruction experiment)))
     (loop for idx from 0
@@ -46,6 +62,9 @@
                     (return (append genotype (list new-instr)))))))
 
 (defun remove-instruction (genotype)
+  "Remove a random instruction from GENOTYPE.
+   There is *no* check that the genotype has more than one instruction.
+   This check is performed externally in 'maybe-remove-instruction."
   (let* ((i (random (length genotype))))
     (loop for instr in genotype
           for idx from 0
@@ -53,6 +72,9 @@
             collect instr)))
 
 (defun mutate-constant (genotype experiment)
+  "Select a random constant in GENOTYPE and perturb it using Gaussian noise
+   with standard deviation from EXPERIMENT. If no constants exists,
+   return the original GENOTYPE unchanged."
   (let* ((constant-locations (loop for instr in genotype
                                    for instr-idx from 0
                                    append (loop for arg in (cddr instr)
@@ -77,6 +99,11 @@
                 collect (if (= i instr-idx) new-instr instr))))))
 
 (defun mutate-instruction (genotype experiment)
+  "Mutate a randomly chosen instruction in GENOTYPE.
+   The mutation may target:
+   - the destination register
+   - the opcode
+   - or one of the arguments (register, observation, or constant)."
   (let* ((choice-of-mutation (random-choice '(destination operator args)))
          (target (random (length genotype)))
          (old-instruction (nth target genotype))
@@ -104,9 +131,9 @@
                for i from 0
                collect (if (= i target) new-instruction instruction))))
 
-;; The 'maybe' methods that are responsible for constraints and randomness
-
 (defun maybe-add-instruction (genotype experiment)
+  "Add a new instruction to GENOTYPE with a probability defined by EXPERIMENT.
+   Only adds if the GENOTYPE's instruction count is below the EXPERIMENT's maximum."
   (let ((add-instruction-probability (experiment-add-instruction-probability experiment))
         (maximum-instruction-count (experiment-maximum-instruction-count experiment)))
     (if (and (bernoulli add-instruction-probability) (< (length genotype) maximum-instruction-count))
@@ -114,32 +141,46 @@
         genotype)))
 
 (defun maybe-remove-instruction (genotype experiment)
+  "Remove a random instruction from GENOTYPE with a probability defined by EXPERIMENT.
+   Only removes if more than one instruction is present."
   (let ((delete-instruction-probability (experiment-delete-instruction-probability experiment)))
     (if (and (bernoulli delete-instruction-probability) (> (length genotype) 1))
         (remove-instruction genotype)
         genotype)))
 
 (defun maybe-swap-instructions (genotype experiment)
+  "Swap two instructions in GENOTYPE with a probability defined by EXPERIMENT.
+   Only applies if the genotype has more than one instruction."
   (let ((swap-instruction-probability (experiment-swap-instruction-probability experiment)))
     (if (and (bernoulli swap-instruction-probability) (> (length genotype) 1))
         (swap-instructions genotype)
         genotype)))
 
 (defun maybe-mutate-instruction (genotype experiment)
+  "Apply an instruction mutation (destination, opcode, or argument)
+   with a probability defined by EXPERIMENT."
   (let ((mutate-instruction-probability (experiment-mutate-instruction-probability experiment)))
     (if (bernoulli mutate-instruction-probability)
         (mutate-instruction genotype experiment)
         genotype)))
 
 (defun maybe-mutate-constant (genotype experiment)
+  "Mutate a constant in GENOTYPE using Gaussian noise, with probability defined by EXPERIMENT.
+   Only applies if the GENOTYPE contains a constant."
   (let ((mutate-constant-probability (experiment-mutate-constant-probability experiment)))
     (if (bernoulli mutate-constant-probability)
         (mutate-constant genotype experiment)
         genotype)))
     
-                                        ; A Stephen Kelly approach to Mutation
-
 (defun mutate (genotype experiment)
+  "Apply a series of stochastic mutations to GENOTYPE according to the EXPERIMENT's settings.
+   Mutation steps include:
+    - maybe adding an instruction
+    - maybe removing an instruction
+    - maybe swapping two instructions
+    - maybe mutating an instruction
+    - maybe mutating a constant
+    Uses the `->` macro to thread GENOTYPE through each stage."
   (-> genotype
       (maybe-add-instruction experiment)
       (maybe-remove-instruction experiment)

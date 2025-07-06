@@ -10,38 +10,48 @@
           :initial-value x))
 
 (defmacro symbols (prefix from start to end)
+  "Return a list of symbols formed by appending integers START through END
+   to the given PREFIX. E.g., (symbols R from 1 to 3) => (R1 R2 R3)."
   `(list ,@(loop for i from start to end
                  collect `(intern ,(format nil "~A~D" prefix i)))))
 
 
                                         ; Our minimalist unit-testing library
-(defvar *test-name* nil)
+(defvar *test-name* nil
+  "*TEST-NAME* is updated by `deftest` to track nested test call chains.")
 
 (defmacro deftest (name parameters &body body)
-  "Define a test function. Within a test function we can call
-   other test functions or use 'check' to run individual test
-   cases."
+  "Define a test function named NAME with PARAMETERS. Within the test,
+   CHECK and CHECK-FREQUENCY macros can be used. *TEST-NAME* is updated
+   to track nested test call chains."
   `(defun ,name ,parameters
     (let ((*test-name* (append *test-name* (list ',name))))
       ,@body)))
 
 (defmacro check (&body forms)
-  "Run each expression in 'forms' as a test case."
+  "Evaluate each form and report the result as a test case.
+   Uses REPORT-RESULT to log pass/fail status for each form."
   `(combine-results
     ,@(loop for f in forms collect `(report-result ,f ',f))))
 
 (defmacro combine-results (&body forms)
+  "Evaluate each form and report the result as a test case.
+   Uses REPORT-RESULT to log pass/fail status for each form.
+   Similar to AND but there is no short-circuiting."
   (let ((result (gensym "RESULT")))
     `(let ((,result t))
        ,@(loop for f in forms collect `(unless ,f (setf ,result nil)))
        ,result)))
 
 (defun report-result (result form)
-  "Report the results of a single test case. Called by 'check'."
+  "Print the result of a single test case."
   (format t "~:[FAIL~;pass~] ... ~a: ~a~%" result *test-name* form)
   result)
 
 (defmacro check-frequency ((n target threshold) &body body)
+  "Evaluate BODY N times and compute how often it returns true.
+   Passes if the observed proportion is within THRESHOLD of TARGET.
+   Useful for statistical checks, e.g., for measuring stochastic distributions."
   (let ((occurrences (gensym "OCCURRENCES"))
         (trial (gensym "TRIAL"))
         (proportion (gensym "PROPORTION"))
@@ -55,14 +65,9 @@
          (format t "~:[FAIL~;pass~]... ~A [~A/~A] (~,2f) ~A~%" ,result *test-name* ,occurrences ,n ,proportion ',body)
          ,result))))
 
-                                        ; Multithreading macros at the population level
-
-(defun map-population (fn population &key parallel)
-  (if parallel
-      (lparallel:pmap fn population)
-      (mapcar fn population)))
-
 (defmacro with-population (population threads &body forms)
+  "Execute FORMS on each individual in POPULATION in parallel.
+   THREADS specifies how many threads to use."
   (let ((pop-var (gensym "POP")))
     `(let ((,pop-var ,population))
        (if (> ,threads 1)
@@ -85,8 +90,8 @@
        ,pop-var)))
 
 
-                                        ; Utility macro
 (defmacro wall-clock-time (&body body)
+  "Executes BODY and prints the wall-clock time (in seconds)."
   `(let ((start-time (get-internal-real-time)))
      (multiple-value-prog1
          (progn ,@body)
@@ -95,18 +100,26 @@
          (format t "~&Wall clock time: ~,4F seconds~%" elapsed)))))
 
 (defmacro defpopulation (name size experiment)
+  "Define a global population NAME as a list of SIZE genotypes.
+   Each genotype is created using NEW-INDIVIDUAL with EXPERIMENT
+   provided for initialization parameters."
   `(defparameter ,name (loop repeat ,size
                              collect (new-individual ,experiment))))
 
 (defmacro no-result (&body body)
+  "Evaluate BODY and return NIL. Useful when the result will
+   take very long to return."
   `(progn ,@body nil))
 
-                                        ; Prevent overflows when evaluating programs
 
-(defparameter *fp-max* 1e10)
-(defparameter *fp-min* -1e10)
+(defparameter *fp-max* 1e10
+  "Maximum allowable floating-point value for clamping.")
+
+(defparameter *fp-min* -1e10
+  "Minimum allowable floating-point value for clamping.")
 
 (defun clamp (x &optional (min *fp-min*) (max *fp-max*))
+  "Clamp X to the range [MIN, MAX]. If X is not a real number, return 0.0"
   (cond
     ((not (realp x)) 0.0)
     ((> x max) max)
@@ -114,10 +127,14 @@
     (t x)))
 
 (defmacro safe-wrapper (fn)
+  "Return a lambda that applies FN to its arguments, then clamps the result.
+   Use to wrap arbitrary math functions safely."
   `(lambda (&rest args)
      (clamp (apply ,fn args))))
 
 (defmacro def-safe-operator (name fn arity)
+  "Define a new function NAME with ARITY arguments that applies FN and clamps the result.
+   Prevents floating-point overflows or invalid math behaviour during program execution."
   (let ((params (loop for i from 1 to arity collect (gensym "ARG"))))
     `(defun ,name ,params
        (clamp (,fn ,@params)))))

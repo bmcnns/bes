@@ -1,36 +1,45 @@
 (in-package :bes)
 
-                                        ; Fitness metrics
+;;; Fitness metrics
 
 (defmacro minimize (fn)
-  "Syntactic sugar: no transformation needed since NSGA-II assumes minimization"
+  "Wrap FN in a lambda that forwards arguments unchanged.
+   This is syntactic sugar for NSGA-II which assumes minimization."
   `(lambda (&rest args)
      (apply ,fn args)))
 
 (defmacro maximize (fn)
-  "Negate the objective since NSGA-II assumes minimization"
+  "Wrap FN in a lambda that negates its output.
+   This transforms a maximization objective into a minimization one for NSGA-II."
   `(lambda (&rest args)
      (let ((result (apply ,fn args)))
        (if (listp result)
            (mapcar #'- result)
            (- result)))))
-                                        ; Single-objective Optimization
+
+;;; Single-objective Optimization
 
 (defun tournament-selection (ranked-population experiment)
+  "Select an individual from RANKED-POPULATION using tournament selection.
+   The tournament size is specified by EXPERIMENT."
   (let* ((tournament-size (experiment-tournament-size experiment))
          (tournament (loop repeat tournament-size
                            collect (random-choice ranked-population))))
     (car (argmax tournament #'cdr))))
 
 (defun single-objective-selection (ranked-population experiment)
+  "Return a list of individuals from RANKED-POPULATION selected by tournament selection.
+   The number of selected individuals matches the target population size in EXPERIMENT."
   (let ((desired-population-size (experiment-population-size experiment)))
     (loop repeat desired-population-size
           collect (tournament-selection ranked-population experiment))))
 
-                                        ; Multi-objective Optimization
+;;; Multi-objective Optimization
 
 (defun dominates-p (ranked-individual-a ranked-individual-b)
-  "Returns T if individual A dominates individual B."
+  "Return T if RANKED-INDIVIDUAL-A dominates RANKED-INDIVIDUAL-B.
+   Each individual is of the form (genotype . scores) where scores is a
+   list of objective values. Assumes all objectives are to be minimized."
   (let* ((better-or-equal t)
          (strictly-better nil)
          (individual-a-scores (cdr ranked-individual-a))
@@ -43,7 +52,8 @@
     (and better-or-equal strictly-better)))
 
 (defun pareto-front (population)
-  "Return the non-dominated individuals in the population"
+  "Return the Pareto front (non-dominated set) from POPULATION.
+   Each individual is of the form (label . scores)."
   (remove-if
    (lambda (p)
      (some (lambda (q) (dominates-p q p))
@@ -51,6 +61,8 @@
    population))
 
 (defun non-dominated-sorting (ranked-population)
+  "Perform non-dominated sorting on RANKED-POPULATION.
+   Returns a list of fronts, where each front is a list of non-dominated individuals."
   (let ((remaining (copy-list ranked-population))
         (fronts '()))
     (loop while remaining do
@@ -60,23 +72,21 @@
     (nreverse fronts)))
 
 (defun crowding-distances (front)
-  "Returns an alist of (label . distance) for a Pareto front."
+  "Compute crowding distance for each individual in FRONT.
+   Returns an alist mapping genotypes to crowding distances.
+   Used to preserve diversity in NSGA-II selection."
   (let* ((objectives (loop for i from 1 below (length (first front)) collect i)) ; skip label
-         ;; Initialize distances: ((label . 0.0) ...)
          (distances (mapcar (lambda (pt) (cons (first pt) 0.0)) front)))
-    ;; Loop over each objective dimension
     (dolist (obj-index objectives distances)
       (let* ((sorted (sort (copy-list front) #'< :key (lambda (pt) (nth obj-index pt))))
              (f-min (nth obj-index (first sorted)))
              (f-max (nth obj-index (car (last sorted))))
              (range (max (- f-max f-min) 1e-9)))
-        ;; Update distances
         (setf distances
               (mapcar
                (lambda (entry)
                  (destructuring-bind (label . current-distance) entry
                    (cond
-                     ;; Boundaries get ∞
                      ((or (equal label (first (first sorted)))
                           (equal label (first (car (last sorted)))))
                       (cons label most-positive-fixnum))
@@ -91,7 +101,8 @@
                distances))))))
 
 (defun sort-by-crowding-distance (front)
-  "Sorts a Pareto front by descending crowding distance"
+  "Return a new list of individuals from FRONT sorted by crowding distance in descending order.
+   Used in NSGA-II to break ties within a Pareto front."
   (let* ((distances (crowding-distances front)))
     (sort (copy-list front)
           #'>

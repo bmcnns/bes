@@ -101,10 +101,10 @@
 
 (defmacro defpopulation (name size experiment)
   "Define a global population NAME as a list of SIZE genotypes.
-   Each genotype is created using NEW-INDIVIDUAL with EXPERIMENT
+   Each genotype is created using NEW-GENOTYPE with EXPERIMENT
    provided for initialization parameters."
   `(defparameter ,name (loop repeat ,size
-                             collect (new-individual ,experiment))))
+                             collect (new-genotype ,experiment))))
 
 (defmacro no-result (&body body)
   "Evaluate BODY and return NIL. Useful when the result will

@@ -43,7 +43,7 @@
            (list (random-register experiment) instruction (random-argument experiment) (random-argument experiment))))
       (t (error "Unexpected arity")))))
 
-(defun new-individual (experiment)
+(defun new-genotype (experiment)
   "Generate a new genotype as a list of instructions,
    with program length uniformly sampled between the min and max lengths in EXPERIMENT."
   (let ((min-length (experiment-minimum-program-length experiment))

@@ -13,7 +13,7 @@
 (defun pretty-print (genotype)
   "Print a human-readable version of the GENOTYPE (a list of instructions)
    formatted in a style resembling RISC assembly."
-  (loop for instr in individual
+  (loop for instr in genotype
         do (let* ((dest (first instr))
                   (opcode (nth 1 instr))
                   (arity (lookup-arity opcode)))

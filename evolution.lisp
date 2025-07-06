@@ -59,9 +59,9 @@
 (defun evolve (experiment dataset)
   "Initialize a population and run the evolutionary loop using multi-objective optimization.
    Takes an EXPERIMENT definition and a DATASET.
-   Returns the final evolevd population after the specified number of generations in EXPERIMENT."
+   Returns the final evolved population after the specified number of generations in EXPERIMENT."
   (let* ((population-size (experiment-population-size experiment))
          (initial-population (loop repeat population-size
-                                   collect (new-individual experiment))))
+                                   collect (new-genotype experiment))))
     (evolutionary-loop experiment dataset initial-population 0 :evolution-strategy #'multi-objective-optimization)))
 

@@ -10,7 +10,6 @@
                (:file "macros")
                (:file "instructions")
                (:file "dataset")
-               (:file "hopper")
                (:file "experiments")
                (:file "phenotype")
                (:file "mutation")

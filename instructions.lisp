@@ -25,10 +25,7 @@
 (def-safe-operator safe-log protected-log 1)
 (def-safe-operator safe-exp protected-exp 1)
 
-
 (defparameter *instruction-library*
-  "An association list mapping symbolic operator names to their arity and function.
-   Each entry is of the form (NAME . (:arity N :fn FUNCTION))."
   '((ADD . (:arity 2 :fn safe-add))
     (MUL . (:arity 2 :fn safe-mul))
     (DIV . (:arity 2 :fn safe-div))

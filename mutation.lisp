@@ -15,23 +15,23 @@
   (let* ((registers (experiment-registers experiment)))
     (random-choice (remove dest registers))))
 
-(defun mutate-operator (operator experiment)
-  "Return a randomly selected opcode with the same arity as OPERATOR,
-   excluding OPERATOR itself."
-  (let* ((arity (lookup-arity operator))
-         (compatible-operators (instructions-with-arity arity)))
-    (random-choice (remove operator compatible-operators))))
+(defun mutate-opcode (opcode experiment)
+  "Return a randomly selected opcode with the same arity as OPCODE,
+   excluding OPCODE itself."
+  (let* ((arity (lookup-arity opcode))
+         (compatible-opcodes (instructions-with-arity arity)))
+    (random-choice (remove opcodes compatible-opcodes))))
 
-(defun mutate-operand (operand experiment)
-  "Randomly mutate OPERAND to either:
+(defun mutate-argument (argument experiment)
+  "Randomly mutate ARGUMENT to either:
    - A new constant (based on EXPERIMENT's constant probability), or
-   - A new observation variable or register, excluding the original operand."
+   - A new observation variable or register, excluding the original ARGUMENT."
   (let ((constant-probability (experiment-constant-probability experiment))
         (constant-range (experiment-constant-range experiment)))
     
     (if (weighted-coin-flip constant-probability)
         (random-range (first constant-range) (first (last constant-range)))
-        (random-choice (remove operand `(,@(experiment-observations experiment) ,@(experiment-registers experiment)))))))
+        (random-choice (remove argument `(,@(experiment-observations experiment) ,@(experiment-registers experiment)))))))
 
 (defun swap-instructions (genotype)
   "Randomly swap two instructions in the GENOTYPE."
@@ -104,7 +104,7 @@
    - the destination register
    - the opcode
    - or one of the arguments (register, observation, or constant)."
-  (let* ((choice-of-mutation (random-choice '(destination operator args)))
+  (let* ((choice-of-mutation (random-choice '(destination opcode args)))
          (target (random (length genotype)))
          (old-instruction (nth target genotype))
          (new-instruction
@@ -113,15 +113,15 @@
                         for i from 0
                         collect (if (= i 0) (mutate-dest x experiment) x)))
 
-                 ((equal choice-of-mutation 'operator)
+                 ((equal choice-of-mutation 'opcode)
                   (loop for x in old-instruction
                         for i from 0
-                        collect (if (= i 1) (mutate-operator x experiment) x)))
+                        collect (if (= i 1) (mutate-opcode x experiment) x)))
 
                  ((equal choice-of-mutation 'args)
                   (let* ((arg-index (random-range 2 (length old-instruction)))
                          (old-arg (nth arg-index old-instruction))
-                         (new-arg (mutate-operand old-arg experiment)))
+                         (new-arg (mutate-argument old-arg experiment)))
                     (loop for x in old-instruction
                           for i from 0
                           collect (if (= i arg-index) new-arg x))))

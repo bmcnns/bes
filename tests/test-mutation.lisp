@@ -72,51 +72,51 @@
   (check-frequency (1000 1 0)
     (member (mutate-dest 'R1 *mock-experiment*) (experiment-registers *mock-experiment*))))
 
-;; test mutate-operator
+;; test mutate-opcode
 
-(deftest test-mutate-operator-always-different ()
+(deftest test-mutate-opcode-always-different ()
   (check-frequency (1000 1 0)
-    (let ((arbitrary-operator (random-choice (experiment-instruction-set *mock-experiment*))))
-      (not (equal (mutate-operator arbitrary-operator *mock-experiment*) arbitrary-operator)))))
+    (let ((arbitrary-opcode (random-choice (experiment-instruction-set *mock-experiment*))))
+      (not (equal (mutate-opcode arbitrary-opcode *mock-experiment*) arbitrary-opcode)))))
 
-(deftest test-mutated-operator-is-correct-arity ()
+(deftest test-mutated-opcode-is-correct-arity ()
   (check-frequency (1000 1 0)
     (let* ((arbitrary-instruction (random-instruction *mock-experiment*))
-           (arbitrary-operator (nth 1 arbitrary-instruction)))
-      (= (lookup-arity arbitrary-operator) (- (length arbitrary-instruction) 2)))))
+           (arbitrary-opcode (nth 1 arbitrary-instruction)))
+      (= (lookup-arity arbitrary-opcode) (- (length arbitrary-instruction) 2)))))
 
-;; test mutate-operand
+;; test mutate-argument
 
-(deftest test-mutate-operand-matches-constant-probability ()
+(deftest test-mutate-argument-matches-constant-probability ()
   (check-frequency (1000 (experiment-constant-probability *mock-experiment*) 0.05)
     (let* ((arbitrary-instruction (random-instruction *mock-experiment*))
-           (arbitrary-operand (random-choice (cddr arbitrary-instruction))))
-    (numberp (mutate-operand arbitrary-operand *mock-experiment*)))))
+           (arbitrary-argument (random-choice (cddr arbitrary-instruction))))
+    (numberp (mutate-argument arbitrary-argument *mock-experiment*)))))
 
-(deftest test-mutate-operand-always-different ()
+(deftest test-mutate-argument-always-different ()
   (check-frequency (1000 1 0)
     (let* ((arbitrary-instruction (random-instruction *mock-experiment*))
-           (arbitrary-operand (random-choice (cddr arbitrary-instruction))))
-      (not (equal (mutate-operand arbitrary-operand *mock-experiment*) arbitrary-operand)))))
+           (arbitrary-argument (random-choice (cddr arbitrary-instruction))))
+      (not (equal (mutate-argument arbitrary-argument *mock-experiment*) arbitrary-argument)))))
 
                                         ; Test suites
 
-(deftest test-mutate-operator ()
-  (test-mutate-operator-always-different)
-  (test-mutated-operator-is-correct-arity))
+(deftest test-mutate-opcode ()
+  (test-mutate-opcode-always-different)
+  (test-mutated-opcode-is-correct-arity))
 
 (deftest test-mutate-dest ()
   (test-mutate-dest-always-different)
   (test-mutate-dest-always-register))
 
-(deftest test-mutate-operand ()
-  (test-mutate-operand-matches-constant-probability)
-  (test-mutate-operand-always-different))
+(deftest test-mutate-argument ()
+  (test-mutate-argument-matches-constant-probability)
+  (test-mutate-argument-always-different))
 
 (deftest test-micro-mutations ()
-  (test-mutate-operator)
+  (test-mutate-opcode)
   (test-mutate-dest)
-  (test-mutate-operand))
+  (test-mutate-argument))
 
 (deftest test-macro-mutations ()
   (test-never-delete-the-last-instruction)

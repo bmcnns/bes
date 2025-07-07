@@ -13,6 +13,6 @@
                (:file "experiments")
                (:file "phenotype")
                (:file "mutation")
-               (:file "fitness")
                (:file "selection")
+               (:file "fitness")
                (:file "evolution")))

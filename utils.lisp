@@ -1,5 +1,41 @@
 (in-package :bes)
 
+;;; utils.lisp
+;;; ---------
+;;; This file defines general-purpose utility functions and macros used
+;;; throughout BES. It includes syntactic conveniences such as `->` and
+;;; `symbols`, tools for working with randomness and distributions, and
+;;; benchmarking utilities for measuring execution time.
+
+(defmacro wall-clock-time (&body body)
+  "Executes BODY and prints the wall-clock time (in seconds)."
+  `(let ((start-time (get-internal-real-time)))
+     (multiple-value-prog1
+         (progn ,@body)
+       (let ((elapsed (/ (- (get-internal-real-time) start-time)
+                            internal-time-units-per-second)))
+         (format t "~&Wall clock time: ~,4F seconds~%" elapsed)))))
+
+(defmacro symbols (prefix from start to end)
+  "Return a list of symbols formed by appending integers START through END
+   to the given PREFIX. E.g., (symbols R from 1 to 3) => (R1 R2 R3)."
+  `(list ,@(loop for i from start to end
+                 collect `(intern ,(format nil "~A~D" prefix i)))))
+
+(defmacro -> (x &rest forms)
+  "Thread X through FORMS. Each form receives X as its first argument."
+  (reduce (lambda (acc form)
+            (if (consp form)
+                `,(cons (car form) (cons acc (cdr form))) ; (f acc arg1 arg2...)
+                `(,form ,acc))) ; if just a symbol: (f acc)
+          forms
+          :initial-value x))
+
+(defmacro no-result (&body body)
+  "Evaluate BODY and return NIL. Useful when the result will
+   take very long to return."
+  `(progn ,@body nil))
+
 (defun random-choice (list)
   "Randomly select and return an element from LIST."
   (nth (random (length list)) list))
@@ -90,3 +126,13 @@
 (defun column (matrix index)
   "Return the column at INDEX from a MATRIX (a list of lists)."
   (mapcar (lambda (row) (nth index row)) matrix))
+
+(defun clamp (x &optional (min *fp-min*) (max *fp-max*))
+  "Clamp X to the range [MIN, MAX]. If X is not a real number, return 0.0"
+  (cond
+    ((not (realp x)) 0.0)
+    ((> x max) max)
+    ((< x min) min)
+    (t x)))
+
+

@@ -1,5 +1,48 @@
 (in-package :bes)
 
+;;; evolution.lisp
+;;; -------------
+;;;
+;;; This file contains the core evolutionary loop logic for BES.
+;;; It defines macros and functions for population initialization,
+;;; parallel execution, and the main `evolve` function driving the
+;;; generational updates. These macros are used to structure and
+;;; schedule transformations over populations.
+
+
+(defmacro with-population (population threads &body forms)
+  "Execute FORMS on each individual in POPULATION in parallel.
+   THREADS specifies how many threads to use."
+  (let ((pop-var (gensym "POP")))
+    `(let ((,pop-var ,population))
+       (if (> ,threads 1)
+           (progn
+             (unless (find-package 'lparallel)
+               (ql:quickload :lparallel))
+             (setf lparallel:*kernel* (lparallel:make-kernel ,threads))
+             (unwind-protect
+                  (progn
+                    ,@(loop for form in forms
+                            collect
+                            `(setf ,pop-var
+                                   (lparallel:pmap 'list (lambda (individual) ,form) ,pop-var))))
+               (lparallel:end-kernel :wait t)))
+           (progn
+             ,@(loop for form in forms
+                     collect
+                     `(setf ,pop-var
+                            (mapcar (lambda (individual) ,form) ,pop-var)))))
+       ,pop-var)))
+
+
+
+(defmacro defpopulation (name size experiment)
+  "Define a global population NAME as a list of SIZE genotypes.
+   Each genotype is created using NEW-GENOTYPE with EXPERIMENT
+   provided for initialization parameters."
+  `(defparameter ,name (loop repeat ,size
+                             collect (new-genotype ,experiment))))
+
 (defun multi-objective-optimization (dataset population experiment)
   "Perform one generation of NSGA-II multi-objective optimization.
    Takes DATASET, current POPULATION, and EXPERIMENT configuration.
@@ -64,4 +107,3 @@
          (initial-population (loop repeat population-size
                                    collect (new-genotype experiment))))
     (evolutionary-loop experiment dataset initial-population 0 :evolution-strategy #'multi-objective-optimization)))
-

@@ -1,5 +1,32 @@
 (in-package :bes)
 
+;;; instructions.lisp
+;;; ------------------
+;;;
+;;; This file defines the available instruction set used by programs in BES.
+;;; It provides safe mathematical operations for execution within
+;;; evolved programs, guarding against numerical issues such as
+;;; overflow, division by zero, and domain errors.
+
+(defparameter *fp-max* 1e10
+  "Maximum allowable floating-point value for clamping.")
+
+(defparameter *fp-min* -1e10
+  "Minimum allowable floating-point value for clamping.")
+
+(defmacro safe-wrapper (fn)
+  "Return a lambda that applies FN to its arguments, then clamps the result.
+   Use to wrap arbitrary math functions safely."
+  `(lambda (&rest args)
+     (clamp (apply ,fn args))))
+
+(defmacro def-safe-operator (name fn arity)
+  "Define a new function NAME with ARITY arguments that applies FN and clamps the result.
+   Prevents floating-point overflows or invalid math behaviour during program execution."
+  (let ((params (loop for i from 1 to arity collect (gensym "ARG"))))
+    `(defun ,name ,params
+       (clamp (,fn ,@params)))))
+
 (defun analytic-quotient (a b)
   "Return the quotient A / sqrt(1 + B²).
    Used as a numerically stable alternative to division that avoids division by zero."

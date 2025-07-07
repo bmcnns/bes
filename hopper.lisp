@@ -14,18 +14,18 @@
 
 (defdataset *Minimal-Hopper-Expert-v5*)
 
-(defexperiment Hopper-v5
+(defexperiment *Hopper-v5*
   :batch-size 1000
-  :instruction-set (make-instruction-set 'ADD 'SUB 'MUL 'DIV 'SIN 'COS 'LOG 'EXP)
-  :registers (symbols R from 1 to 11) 
-  :observations (symbols OBS from 1 to 11)
-  :output-registers (symbols R from 1 to 3)
+  :instruction-set (ADD SUB MUL DIV SIN COS LOG EXP)
+  :registers (R from 1 to 11) 
+  :observations (OBS from 1 to 11)
+  :output-registers (R from 1 to 3)
   :constant-range '(-10.0 10.0)
   :objectives `((minimize MSE) (minimize complexity))
   :tournament-size 4
   :num-threads 8
   :population-size 1000
-  :generations 1000
+  :generations 10
   :minimum-program-length 8
   :maximum-program-length 128
   :observation-probability 0.5

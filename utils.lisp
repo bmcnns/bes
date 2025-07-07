@@ -30,10 +30,6 @@
     (and (<= plen (length string))
          (string= prefix (subseq string 0 plen)))))
 
-(defun weighted-coin-flip (p)
-  "Return T with probability P, NIL otherwise."
-  (< (random 1.0) p))
-
 (defun bernoulli (p)
   "Return T with probability P, NIL otherwise.
    Simulates a Bernoulli trial with success probability P."

@@ -29,7 +29,7 @@
   (let ((constant-probability (experiment-constant-probability experiment))
         (constant-range (experiment-constant-range experiment)))
     
-    (if (weighted-coin-flip constant-probability)
+    (if (bernoulli constant-probability)
         (random-range (first constant-range) (first (last constant-range)))
         (random-choice (remove argument `(,@(experiment-observations experiment) ,@(experiment-registers experiment)))))))
 

@@ -20,7 +20,7 @@
    excluding OPCODE itself."
   (let* ((arity (lookup-arity opcode))
          (compatible-opcodes (instructions-with-arity arity)))
-    (random-choice (remove opcodes compatible-opcodes))))
+    (random-choice (remove opcode compatible-opcodes))))
 
 (defun mutate-argument (argument experiment)
   "Randomly mutate ARGUMENT to either:
@@ -187,3 +187,6 @@
       (maybe-swap-instructions experiment)
       (maybe-mutate-instruction experiment)
       (maybe-mutate-constant experiment)))
+
+
+

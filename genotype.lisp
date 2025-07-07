@@ -24,7 +24,7 @@
   "Return a randomly selected opcode from the instruction set in EXPERIMENT."
   (random-choice (experiment-instruction-set experiment)))
 
-(defun random-instruction (experiment)
+(defun new-instruction (experiment)
   "Return a syntactically valid instruction sampled from the EXPERIMENT configuration.
    For binary opcodes, exactly one of the inputs may be a constant, based on the constant-probability parameter.
    For unary opcodes, the input must either be a register or an observation variable."
@@ -49,4 +49,4 @@
   (let ((min-length (experiment-minimum-program-length experiment))
         (max-length (experiment-maximum-program-length experiment)))
     (loop repeat (random-range min-length max-length)
-          collect (random-instruction experiment))))
+          collect (new-instruction experiment))))

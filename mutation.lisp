@@ -52,7 +52,7 @@
    There is *no* check that the genotype will remain under the maximum length.
    Instead, this check is performed externally in 'maybe-add-instruction'."
   (let* ((i (random (1+ (length genotype))))
-         (new-instr (random-instruction experiment)))
+         (new-instr (new-instruction experiment)))
     (loop for idx from 0
           for instr in genotype
           appending (if (= idx i)

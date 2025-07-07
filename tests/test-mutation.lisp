@@ -32,7 +32,7 @@
   (check
     (let* ((number-of-trials 1000)
           (almost-maximum-instructions (loop for i from 0 below (experiment-maximum-instruction-count *mock-experiment*)
-                                             collect (random-instruction *mock-experiment*))))
+                                             collect (new-instruction *mock-experiment*))))
       (loop for n from 1 to number-of-trials
             always (equal almost-maximum-instructions (maybe-add-instruction almost-maximum-instructions *mock-experiment*))))))
 
@@ -56,7 +56,7 @@
 
 (deftest test-mutate-instruction-always-different ()
   (check-frequency (1000 1 0)
-    (let* ((arbitrary-instruction (random-instruction *mock-experiment*))
+    (let* ((arbitrary-instruction (new-instruction *mock-experiment*))
            (genotype `(,arbitrary-instruction)))
       (not (equal (mutate-instruction genotype *mock-experiment*) genotype)))))
   
@@ -81,7 +81,7 @@
 
 (deftest test-mutated-opcode-is-correct-arity ()
   (check-frequency (1000 1 0)
-    (let* ((arbitrary-instruction (random-instruction *mock-experiment*))
+    (let* ((arbitrary-instruction (new-instruction *mock-experiment*))
            (arbitrary-opcode (nth 1 arbitrary-instruction)))
       (= (lookup-arity arbitrary-opcode) (- (length arbitrary-instruction) 2)))))
 
@@ -89,13 +89,13 @@
 
 (deftest test-mutate-argument-matches-constant-probability ()
   (check-frequency (1000 (experiment-constant-probability *mock-experiment*) 0.05)
-    (let* ((arbitrary-instruction (random-instruction *mock-experiment*))
+    (let* ((arbitrary-instruction (new-instruction *mock-experiment*))
            (arbitrary-argument (random-choice (cddr arbitrary-instruction))))
     (numberp (mutate-argument arbitrary-argument *mock-experiment*)))))
 
 (deftest test-mutate-argument-always-different ()
   (check-frequency (1000 1 0)
-    (let* ((arbitrary-instruction (random-instruction *mock-experiment*))
+    (let* ((arbitrary-instruction (new-instruction *mock-experiment*))
            (arbitrary-argument (random-choice (cddr arbitrary-instruction))))
       (not (equal (mutate-argument arbitrary-argument *mock-experiment*) arbitrary-argument)))))
 

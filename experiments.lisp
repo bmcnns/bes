@@ -37,7 +37,7 @@
   constant-mutation-std
   maximum-instruction-count)
 
-(defmacro defexperiment (name &body properties)
+(defmacro defexperiment (name &rest options)
   "Define a global variable NAME bound to an EXPERIMENT initialized with keyword arguments.
    Each keyword in PROPERTIES should correspond to a slot in the EXPERIMENT struct.
 
@@ -46,8 +46,25 @@
         :batch-size 1000
         :population-size 1000
         :generations 1000
-        :registers 8
+        :registers (R from 1 to 11)
+        :observations (OBS from 1 to 11)
         :add-instruction-probability 1.0)
         ...)"
+  (flet ((expand-symbol-range (form)
+           (destructuring-bind (prefix from start to end) form
+             (declare (ignore from to))
+             `(symbols ,prefix from ,start to ,end))))
+    (let ((expanded-options
+            (loop for (key val) on options by #'cddr
+                  append
+                  (cond
+                    ((eq key :instruction-set)
+                     `(:instruction-set (make-instruction-set ,@(mapcar (lambda (x) `',x) val))))
+                    ((and (member key '(:registers :observations :output-registers))
+                          (listp val) (eq (second val) 'from))
+                     (list key (expand-symbol-range val)))
+                    (t (list key val))))))
   `(defparameter ,name
-     (make-experiment ,@properties)))
+     (make-experiment ,@expanded-options)))))
+
+

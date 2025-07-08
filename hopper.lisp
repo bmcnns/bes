@@ -21,7 +21,7 @@
   :observations (OBS from 1 to 11)
   :output-registers (R from 1 to 3)
   :constant-range '(-10.0 10.0)
-  :objectives `((minimize MSE) (minimize complexity))
+  :objectives (mean-squared-error complexity)
   :tournament-size 4
   :num-threads 8
   :population-size 1000

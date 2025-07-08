@@ -25,7 +25,7 @@
   (let* ((tournament-size (experiment-tournament-size experiment))
          (tournament (loop repeat tournament-size
                            collect (random-choice ranked-population))))
-    (car (argmax tournament #'cdr))))
+    (car (argmax tournament #'cadr))))
 
 (defun single-objective-selection (ranked-population experiment)
   "Return a list of individuals from RANKED-POPULATION selected by tournament selection.

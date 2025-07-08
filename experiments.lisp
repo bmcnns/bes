@@ -48,7 +48,8 @@
         :generations 1000
         :registers (R from 1 to 11)
         :observations (OBS from 1 to 11)
-        :add-instruction-probability 1.0)
+        :add-instruction-probability 1.0
+        :objectives (mean-squared-error complexity)
         ...)"
   (flet ((expand-symbol-range (form)
            (destructuring-bind (prefix from start to end) form
@@ -63,6 +64,8 @@
                     ((and (member key '(:registers :observations :output-registers))
                           (listp val) (eq (second val) 'from))
                      (list key (expand-symbol-range val)))
+                    ((eq key :objectives)
+                     `(:objectives (list ,@(mapcar (lambda (x) `(quote ,(intern (string x) :keyword))) val))))
                     (t (list key val))))))
   `(defparameter ,name
      (make-experiment ,@expanded-options)))))

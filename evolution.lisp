@@ -55,7 +55,7 @@
                      (mutate individual experiment)))
          (combined-population (append children parents))
          (ranked-population (with-population combined-population num-threads
-                              (fitness individual actions (phenotype individual experiment observations))))
+                              (fitness experiment individual actions (phenotype individual experiment observations))))
          (pareto-fronts (non-dominated-sorting ranked-population))
          (ranked-next-population '()))
     (loop for front in pareto-fronts
@@ -75,15 +75,15 @@
    Returns the next generation after selection and mutation."
   (let* ((num-threads (experiment-num-threads experiment))
          (observations (observations dataset))
-         (actions (actions dataset)))
-    (let ((ranked-population
-            (with-population population num-threads
-              (let ((predictions (phenotype individual experiment obs)))
-                (fitness individual #'negative-mean-squared-error actions predictions)))))
-      (-> ranked-population
-          (single-objective-selection experiment)
-          (with-population num-threads
-              (mutate individual experiment))))))
+         (actions (actions dataset))
+         (ranked-population
+           (with-population population num-threads
+             (let ((predictions (phenotype individual experiment observations)))
+               (fitness experiment individual actions predictions)))))
+    (-> ranked-population
+        (single-objective-selection experiment)
+        (with-population num-threads
+            (mutate individual experiment)))))
   
 
 (defun evolutionary-loop (experiment dataset population generation &key evolution-strategy)
@@ -106,4 +106,6 @@
   (let* ((population-size (experiment-population-size experiment))
          (initial-population (loop repeat population-size
                                    collect (new-genotype experiment))))
-    (evolutionary-loop experiment dataset initial-population 0 :evolution-strategy #'multi-objective-optimization)))
+    (if (> (length (experiment-objectives experiment)) 1)
+        (evolutionary-loop experiment dataset initial-population 0 :evolution-strategy #'multi-objective-optimization)
+        (evolutionary-loop experiment dataset initial-population 0 :evolution-strategy #'single-objective-optimization))))

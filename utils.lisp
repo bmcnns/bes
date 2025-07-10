@@ -42,9 +42,11 @@
 
 (defun random-range (x y)
   "Return a random number in the inclusive range [X, Y].
-   If either X or Y is a float, a random float is returned;
-   otherwise, a random integer."
-  (+ x (random (+ 1 (- y x)))))
+   If either X or Y is a float, return a random float in [X, Y).
+   Otherwise, return a random integer in [X, Y]."
+  (if (or (floatp x) (floatp y))
+      (+ x (* (random 1.0) (- y x)))  ; [x, y)
+      (+ x (random (1+ (- y x))))))    ; [x, y]
 
 (defun pretty-print (genotype)
   "Print a human-readable version of the GENOTYPE (a list of instructions)

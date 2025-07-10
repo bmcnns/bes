@@ -21,11 +21,11 @@
   :observations (OBS from 1 to 11)
   :output-registers (R from 1 to 3)
   :constant-range '(-10.0 10.0)
-  :objectives (mean-squared-error complexity)
+  :objectives (mean-squared-error)
   :tournament-size 4
   :num-threads 8
   :population-size 1000
-  :generations 10
+  :generations 1000
   :minimum-program-length 8
   :maximum-program-length 128
   :observation-probability 0.5

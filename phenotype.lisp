@@ -54,6 +54,21 @@
                     obs)
             (funcall fn registers (list->vector obs)))))))
 
+(defun clamp-registers (result &optional (min -1) (max 1))
+  "Clamps all values in RESULT to be between MIN and MAX.
+RESULT can be a list of registers or a batch of list of registers."
+  (if (listp (first result))
+      ;; If the first element is a list, assume it's a batch of inputs
+      (mapcar (lambda (registers)
+                (mapcar (lambda (value)
+                          (clamp value min max))
+                        registers))
+              result)
+      ;; Otherwise, it's a single input
+      (mapcar (lambda (value)
+                (clamp value min max))
+              result)))
+
 (defun phenotype (genotype experiment observations &key show-all-registers)
   "Convenience function to evaluate a GENOTYPE on OBSERVATIONS using EXPERIMENT.
    Internally compiles the genotype into a function using CONVERT-TO-PHENOTYPE and
@@ -65,4 +80,4 @@
 
    SHOW-ALL-REGISTERS (optional): If true, returns all registers;
    otherwise, return the output register(s) defined in EXPERIMENT."
-  (funcall (convert-to-phenotype genotype experiment :show-all-registers show-all-registers) observations))
+  (clamp-registers (funcall (convert-to-phenotype genotype experiment :show-all-registers show-all-registers) observations)))

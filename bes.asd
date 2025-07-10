@@ -7,7 +7,6 @@
   :components ((:file "package")
                (:file "utils")
                (:file "genotype")
-               (:file "macros")
                (:file "instructions")
                (:file "dataset")
                (:file "experiments")
@@ -15,4 +14,6 @@
                (:file "mutation")
                (:file "selection")
                (:file "fitness")
-               (:file "evolution")))
+               (:file "evolution")
+               (:file "hopper")))
+

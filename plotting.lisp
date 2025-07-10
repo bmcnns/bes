@@ -1,5 +1,6 @@
 (in-package :bes)
 
+(setf py4cl:*python-command* "~/Repos/bes/.venv/bin/python3")
 (py4cl:import-module "matplotlib.pyplot" :as "plt")
 
 (defun plot-residuals (observations actions predictions)

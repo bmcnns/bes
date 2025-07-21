@@ -105,7 +105,10 @@
    Returns the final evolved population after the specified number of generations in EXPERIMENT."
   (let* ((population-size (experiment-population-size experiment))
          (initial-population (loop repeat population-size
-                                   collect (new-genotype experiment))))
-    (if (> (length (experiment-objectives experiment)) 1)
-        (evolutionary-loop experiment dataset initial-population 0 :evolution-strategy #'multi-objective-optimization)
-        (evolutionary-loop experiment dataset initial-population 0 :evolution-strategy #'single-objective-optimization))))
+                                   collect (new-genotype experiment)))
+         (final-population (if (> (length (experiment-objectives experiment)) 1)
+                               (evolutionary-loop experiment dataset initial-population 0 :evolution-strategy #'multi-objective-optimization)
+                               (evolutionary-loop experiment dataset initial-population 0 :evolution-strategy #'single-objective-optimization)))
+         (evaluation-batch (sample dataset experiment)))
+    (with-population final-population (experiment-num-threads experiment)
+      (fitness experiment individual (actions evaluation-batch) (phenotype individual experiment (observations evaluation-batch))))))

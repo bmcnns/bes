@@ -15,5 +15,5 @@
                (:file "selection")
                (:file "fitness")
                (:file "evolution")
-               (:file "hopper")))
+               (:file "experiments/hopper")))
 

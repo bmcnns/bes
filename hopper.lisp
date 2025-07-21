@@ -12,7 +12,7 @@
 ;;; The experiment targets two objectives: minimizing prediction error (MSE)
 ;;; and minimizing program complexity.
 
-(defdataset *Minimal-Hopper-Expert-v5*)
+(defdataset *Hopper-Expert-v5*)
 
 (defexperiment *Hopper-v5*
   :batch-size 1000

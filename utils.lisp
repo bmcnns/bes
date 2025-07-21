@@ -125,6 +125,16 @@
           (setf best item
                 best-val val))))))
 
+(defun argmin (seq fn)
+  "Return the element in SEQ for which FN returns the lowest value."
+  (let ((best (first seq))
+        (best-val (funcall fn (first seq))))
+    (dolist (item (rest seq) best)
+      (let ((val (funcall fn item)))
+        (when (< val best-val)
+          (setf best item
+                best-val val))))))
+
 (defun column (matrix index)
   "Return the column at INDEX from a MATRIX (a list of lists)."
   (mapcar (lambda (row) (nth index row)) matrix))

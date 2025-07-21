@@ -35,16 +35,9 @@
    identifying each solution, and COMPLEXITY and ERROR are numeric values representing objectives.
 
    Labels are annotated beside each point, and the front is plotted using scatter points."
-  (let ((point-labels (column pareto-front 0))
+  (let (;; (point-labels (column pareto-front 0))
         (x (column pareto-front 1))
         (y (column pareto-front 2)))
-    (loop for xi in x
-          for yi in y
-          for label in point-labels do
-            (plt:text xi yi (symbol-name label)
-                      :fontsize 10
-                      :ha "left"
-                      :va "bottom"))
     (plt:scatter x y :color "blue")
     (plt:xlabel "Complexity")
     (plt:ylabel "Error")

@@ -22,10 +22,10 @@
 
 (defparameter *objectives*
   `((:complexity . ,#'(lambda (genotype truth prediction)
-                     (declare (ignore truth prediction))
-                     (complexity genotype)))
+                        (declare (ignore truth prediction))
+                        (complexity genotype)))
     (:mean-squared-error . ,#'(lambda (genotype truth prediction)
-                             (declare (ignore genotype))
+                                (declare (ignore genotype))
                                 (mean-squared-error truth prediction))))
   "The available objectives to optimize in a fitness function.
    This maps between a defined EXPERIMENT and the dynamic fitness

@@ -28,8 +28,8 @@
         dataset
         (progn
           (let* ((start (random (- (length dataset) batch-size)))
-                 (end (+ start batch-size))))
-          (batch dataset start end)))))
+                 (end (+ start batch-size)))
+            (batch dataset start end))))))
 
 (defun observations (transitions)
   "Return a list of observations from TRANSITIONS.

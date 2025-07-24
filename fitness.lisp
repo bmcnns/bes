@@ -14,7 +14,7 @@
              (sum-squared-errors (reduce #'+ squared-errors)))
         (/ sum-squared-errors (length squared-errors)))
       ;; Batched case
-      (reduce #'+ (mapcar #'mean-squared-error y-predicted y-truth))))
+      (/ (reduce #'+ (mapcar #'mean-squared-error y-predicted y-truth)) (length y-predicted))))
 
 (defun complexity (genotype)
   "Return the complexity of GENOTYPE, defined here as its length."

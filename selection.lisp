@@ -19,13 +19,12 @@
 
 ;;; Single-objective Optimization
 
-(defun tournament-selection (ranked-population experiment)
+(defun tournament-selection (ranked-population tournament-size)
   "Select an individual from RANKED-POPULATION using tournament selection.
    The tournament size is specified by EXPERIMENT."
-  (let* ((tournament-size (experiment-tournament-size experiment))
-         (tournament (loop repeat tournament-size
+  (let* ((tournament (loop repeat tournament-size
                            collect (random-choice ranked-population))))
-    (car (argmin tournament #'cadr))))
+    (argmin tournament #'cadr)))
 
 (defun single-objective-selection (ranked-population experiment)
   "Return a list of individuals from RANKED-POPULATION selected by tournament selection.

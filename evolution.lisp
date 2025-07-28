@@ -67,7 +67,7 @@
                            (selected (subseq sorted-by-crowding 0 remaining)))
                       (setf ranked-next-population (nconc ranked-next-population selected)))
                     (return)))))
-    (report ranked-population experiment generation)
+    (write-report ranked-population experiment generation)
     (mapcar #'car ranked-next-population)))
 
 (defun single-objective-optimization (dataset population experiment generation)
@@ -82,7 +82,7 @@
              (let ((predictions (phenotype individual experiment observations)))
                (fitness experiment individual actions predictions))))
          (new-population (mapcar #'car (single-objective-selection ranked-population experiment))))
-    (report ranked-population experiment generation)
+    (write-report ranked-population experiment generation)
     (with-population new-population num-threads
       (mutate individual experiment))))
 

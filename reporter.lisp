@@ -54,7 +54,7 @@
                  (format stream ",~F,~F,~F" min avg max)))
       (terpri stream))))
 
-(defun report (ranked-population experiment generation)
+(defun write-report (ranked-population experiment generation)
   (if (= generation 1)
       (progn
         (write-log-header experiment)

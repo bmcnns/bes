@@ -1,0 +1,240 @@
+#+TITLE: Minimal-Hopper-Expert-v5
+#+SUBTITLE: Benchmarking BES on the Minimal-Hopper-Expert-v5 dataset.
+
+First, let's load our package.
+
+#+BEGIN_SRC lisp 
+  (ql:quickload :bes)
+  (in-package :bes)
+#+END_SRC
+
+#+RESULTS:
+: #<PACKAGE "BES">
+
+Next, let's load our dataset.
+
+#+BEGIN_SRC lisp
+  (defdataset *Minimal-Hopper-Expert-v5*
+    :path "~/.datasets/Minimal-Hopper-Expert-v5")
+#+END_SRC
+
+#+RESULTS:
+: *MINIMAL-HOPPER-EXPERT-V5*
+
+And then let's define the experiment configuration.
+
+#+BEGIN_SRC lisp :exports both
+(defexperiment *Hopper-v5*
+  :batch-size 1000
+  :instruction-set (ADD SUB MUL DIV SIN COS LOG EXP)
+  :registers (R from 1 to 11) 
+  :observations (OBS from 1 to 11)
+  :output-registers (R from 1 to 3)
+  :constant-range '(-10.0 10.0)
+  :objectives (mean-squared-error)
+  :tournament-size 4
+  :num-threads 8
+  :population-size 1000
+  :generations 1000
+  :minimum-program-length 8
+  :maximum-program-length 128
+  :observation-probability 0.5
+  :constant-probability 0.5
+  :mutate-instruction-probability 1.0
+  :mutate-register-probability 0.5
+  :mutate-operation-probability 0.25
+  :mutate-constant-probability 0.25
+  :add-instruction-probability 1.0
+  :delete-instruction-probability 1.0
+  :swap-instruction-probability 1.0
+  :constant-mutation-std 1.0
+  :maximum-instruction-count 256)
+#+END_SRC
+
+#+RESULTS:
+: *HOPPER-V5*
+
+Now let's run the evolution, since we're benchmarking we'll do this over 10 trials.
+Each time it'll produce a file called results.csv, so we'll take this and rename it for each trial.
+
+ #+BEGIN_SRC lisp
+    (defparameter *best-individuals* (make-hash-table))
+
+    (defun store-best-individual (trial-id genotype)
+      (setf (gethash trial-id *best-individuals*) genotype))
+
+    (defun get-best-individual (trial-id)
+      (gethash trial-id *best-individuals*))
+
+    (loop for trial from 1 to 10
+          do 
+             (format t "Starting trial ~A/~A...~%" trial 10)
+             (ensure-directories-exist "runs/Minimal-Hopper-Expert-v5/")
+             (let* ((solutions (evolve *Hopper-v5* *Minimal-Hopper-Expert-v5*))
+                    (best-individual (car (argmin solutions #'cadr))))
+               (store-best-individual trial best-individual))
+             (rename-file "results.csv" (format nil "runs/Minimal-Hopper-Expert-v5/results-~A.csv" trial)))
+#+END_SRC
+
+#+RESULTS:
+: NIL
+
+And now let's record our best individuals
+
+#+BEGIN_SRC lisp :results output :exports both
+  (loop for trial from 1 to 10
+        do (format t "~A~%" (get-best-individual trial)))
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+((R3 DIV OBS11 -8.38394) (R10 DIV OBS6 OBS9) (R11 MUL R11 R2)
+ (R5 MUL 4.805649 OBS1) (R2 EXP OBS6) (R3 DIV R3 OBS1) (R6 DIV R5 OBS8)
+ (R10 SUB OBS11 R7) (R1 SUB -0.19844246 OBS3) (R2 MUL OBS5 OBS5))
+((R8 EXP OBS9) (R2 SIN R5) (R5 EXP R1) (R9 MUL OBS9 -2.9184866) (R1 EXP OBS5)
+ (R5 SUB 9.024019 OBS6) (R7 EXP OBS7) (R2 SIN OBS9)
+ (R3 SUB -6.908662291572181d0 OBS10) (R11 SIN R4)
+ (R4 SUB -2.335653357179779d0 OBS5) (R5 MUL -6.884671187443916d0 OBS3)
+ (R2 MUL 8.980007 OBS5) (R6 LOG R7) (R10 COS OBS11) (R5 SUB R2 OBS7)
+ (R11 MUL R10 OBS7) (R10 EXP OBS7) (R10 SUB R10 OBS2) (R5 ADD R4 1.864605)
+ (R9 SUB OBS3 9.211309) (R6 ADD OBS2 -2.55296211637622d0) (R1 COS OBS11)
+ (R5 DIV R5 OBS7) (R7 MUL R6 R5) (R1 EXP 6.658040803170471d0)
+ (R3 MUL OBS4 -6.878412) (R5 MUL R10 OBS8) (R8 DIV -6.4753294 OBS5)
+ (R4 SIN OBS7) (R11 EXP R7) (R1 LOG OBS11) (R2 SUB 1.6980048122068478d0 R3)
+ (R4 MUL OBS5 OBS5) (R9 EXP R4) (R4 DIV R8 7.36916649751071d0) (R8 ADD R8 OBS3)
+ (R7 DIV R10 -5.812447) (R5 MUL 0.345533016216361d0 R9) (R9 ADD R7 OBS1)
+ (R7 DIV 6.533642 OBS3) (R6 LOG R5) (R11 MUL R7 R4) (R5 EXP R9)
+ (R4 ADD 2.752226396030825d0 R4) (R7 COS OBS3) (R3 DIV 8.625586 R5) (R2 SIN R2)
+ (R5 SIN R3) (R3 ADD 5.0593996 OBS9) (R3 LOG R5) (R7 EXP OBS5)
+ (R3 MUL 2.4601917 R3) (R9 SUB OBS4 0.4811573) (R10 SIN R8) (R2 DIV R10 OBS1)
+ (R4 MUL OBS10 -5.746591) (R1 MUL R3 R2) (R3 ADD R10 R3) (R10 MUL R6 R3)
+ (R6 DIV 1.4478989 OBS10))
+((R3 DIV OBS11 9.980955) (R11 MUL R7 OBS4) (R1 COS OBS10) (R8 MUL 7.6038246 R1)
+ (R1 MUL -3.124609 OBS2) (R4 SUB OBS2 OBS5) (R9 ADD R10 R3) (R3 SIN R9)
+ (R2 MUL OBS5 OBS5))
+((R4 SIN R7) (R4 ADD OBS10 OBS3) (R8 ADD R2 OBS6) (R3 SUB R11 OBS5)
+ (R3 SIN OBS10) (R2 LOG 6.9189625) (R8 ADD OBS8 OBS4) (R2 SIN OBS6)
+ (R5 MUL R10 OBS8) (R6 EXP R7) (R6 MUL R10 3.9662728055312413d0)
+ (R7 SUB R9 OBS2) (R5 MUL 0.8620548 R6) (R9 DIV R1 OBS7) (R9 SIN R9)
+ (R6 LOG -3.3993626) (R3 MUL OBS5 R4) (R8 ADD R9 OBS5) (R1 MUL -0.6458969 R11)
+ (R7 ADD OBS11 9.869750104576273d0) (R10 LOG OBS1) (R11 EXP R3) (R4 SIN R4)
+ (R5 LOG R7) (R7 LOG OBS1) (R2 EXP OBS1) (R11 SUB OBS11 R11)
+ (R1 DIV R4 -0.57634544) (R5 SUB OBS10 OBS1) (R1 COS OBS4) (R7 EXP R11)
+ (R11 SUB OBS3 OBS7) (R2 LOG OBS10) (R2 EXP R2) (R4 ADD R2 OBS7)
+ (R11 ADD R11 9.261433194472689d0) (R5 COS R10) (R4 ADD R4 R4) (R1 LOG R9)
+ (R11 SUB R11 R9) (R7 SIN R6) (R10 COS R1) (R2 DIV R3 9.181528530110365d0)
+ (R9 SUB OBS6 OBS5) (R10 DIV R9 -6.388724) (R9 LOG R4) (R11 LOG R5)
+ (R2 SIN OBS2) (R8 EXP R6) (R5 DIV R2 6.8418083) (R5 SUB -8.537729 R4)
+ (R4 SIN OBS9) (R6 MUL R2 R10) (R7 SUB OBS4 R9) (R6 DIV R6 OBS4)
+ (R2 SUB -3.4921098 OBS1) (R11 COS OBS3) (R7 LOG OBS1) (R8 SUB R9 3.237421)
+ (R10 MUL OBS7 R7) (R4 ADD R5 OBS11) (R1 MUL R4 R6) (R10 DIV OBS4 -2.142737)
+ (R10 DIV OBS11 OBS11) (R7 ADD R2 OBS7) (R7 LOG OBS10) (R4 COS OBS6)
+ (R2 SIN R11) (R9 SUB 3.7071848 R10) (R8 LOG 3.1354504) (R9 EXP R3)
+ (R11 EXP R7) (R11 SUB R4 OBS4) (R3 COS OBS6) (R2 COS OBS2)
+ (R9 ADD R8 8.314823) (R10 LOG OBS10) (R11 SIN R9)
+ (R8 MUL -2.459022128403445d0 7.1873245) (R1 ADD R1 0.063064575)
+ (R11 SUB R7 -2.0782659197930977d0) (R7 COS OBS8) (R7 COS R9) (R11 LOG R7)
+ (R1 SIN R1) (R7 ADD OBS2 OBS5) (R6 ADD OBS10 -5.689616484534994d0)
+ (R2 DIV R2 OBS7) (R8 SIN OBS11) (R8 EXP OBS10) (R8 LOG OBS8) (R1 DIV R1 OBS5)
+ (R11 MUL OBS11 -3.8704467) (R5 DIV R11 R5) (R9 SUB OBS5 OBS8) (R6 SIN OBS11)
+ (R1 DIV R1 OBS4) (R2 ADD R11 OBS8) (R3 SIN -5.116922415218497d0)
+ (R5 ADD OBS4 R5) (R4 COS R1) (R9 MUL 6.5032406 R4) (R10 EXP OBS6) (R11 LOG R5)
+ (R2 SIN R9) (R5 ADD OBS5 OBS8) (R5 SIN OBS10) (R6 MUL 6.456632413002042d0 R2)
+ (R10 COS OBS11) (R3 MUL R11 OBS11))
+((R10 SIN R5) (R8 ADD OBS1 -6.740258395026884d0) (R3 MUL OBS3 2.0670557)
+ (R7 EXP 8.811214) (R1 EXP R9) (R2 MUL -2.426753 OBS5) (R1 MUL -2.9386044 OBS2)
+ (R3 ADD 1.8759441 OBS11) (R7 EXP R3) (R2 MUL OBS5 OBS5)
+ (R10 ADD OBS6 -7.4790382) (R8 EXP OBS7) (R3 DIV R3 R7)
+ (R10 DIV -6.524361582114504d0 R7) (R9 SIN R2) (R2 SIN R9))
+((R5 MUL R9 R7) (R3 COS OBS1) (R8 SUB R5 R11) (R10 EXP OBS2) (R7 SUB R10 OBS7)
+ (R11 DIV OBS4 OBS3) (R3 MUL R3 OBS6) (R8 LOG R1) (R5 COS -1.7042332)
+ (R2 SUB -3.2049727 R2) (R3 SUB R3 OBS2) (R9 COS R6) (R8 SUB R1 R11)
+ (R8 DIV 3.2757378 OBS5) (R1 MUL OBS2 -3.1694174)
+ (R5 SUB 1.8071478889125507d0 R11) (R6 LOG R4) (R9 SUB OBS9 OBS9) (R2 SIN R8)
+ (R3 SUB R2 R3) (R7 DIV -4.486062458220169d0 R4) (R4 MUL OBS4 OBS6)
+ (R5 LOG OBS4))
+((R4 LOG OBS2) (R7 COS OBS2) (R8 EXP R4) (R5 DIV R4 OBS1)
+ (R10 SUB OBS4 8.040876) (R3 DIV OBS11 -9.512186) (R8 SUB OBS10 R2) (R5 COS R2)
+ (R5 SUB OBS9 R1) (R11 LOG 6.692541) (R11 COS OBS9) (R7 EXP OBS3)
+ (R2 MUL OBS5 OBS5) (R3 SIN R3) (R8 COS R2) (R3 ADD OBS4 R3) (R5 LOG OBS4)
+ (R4 ADD OBS7 OBS2) (R1 MUL -0.1448803 OBS8) (R5 DIV 8.346155 2.9573345)
+ (R9 ADD OBS7 OBS5) (R4 EXP OBS6) (R2 ADD R2 OBS3) (R9 DIV R5 R5)
+ (R11 DIV R9 -8.263767) (R4 DIV R3 OBS5) (R4 SUB OBS10 OBS1)
+ (R2 SUB R2 -0.12279987) (R9 SIN R9) (R11 MUL 0.3597908 OBS8) (R10 COS OBS1)
+ (R3 ADD R1 R3) (R1 SUB R1 R2) (R5 EXP R4) (R5 SUB R9 OBS11)
+ (R9 EXP -2.8262043) (R6 DIV 6.301778273026272d0 OBS1) (R3 ADD R2 R3)
+ (R4 SIN OBS2) (R1 DIV R1 OBS1) (R7 COS OBS4) (R5 LOG R10))
+((R7 MUL OBS10 R9) (R3 DIV R8 OBS11) (R6 SIN R6) (R11 SIN R4) (R10 COS OBS2)
+ (R10 EXP OBS4) (R1 SUB OBS5 1.0401134) (R10 DIV -9.06740720135251d0 R2)
+ (R5 LOG OBS1) (R6 MUL OBS7 R6) (R11 LOG OBS9) (R8 LOG OBS11) (R3 COS OBS4)
+ (R3 LOG R7) (R4 MUL 9.964877609778732d0 OBS1) (R6 COS -0.12916374)
+ (R8 SUB OBS3 -9.926457) (R5 EXP OBS6) (R10 MUL R7 R4) (R6 LOG R11)
+ (R5 LOG OBS7) (R9 ADD -9.132822 R2) (R2 LOG OBS10) (R1 SUB OBS3 R5)
+ (R10 SIN R2) (R11 COS OBS3) (R3 ADD R8 R6) (R2 COS R4) (R11 DIV R11 R6)
+ (R2 COS OBS6) (R7 MUL 3.8959389 R5) (R11 COS R1) (R4 LOG OBS6) (R1 ADD R11 R5)
+ (R4 SUB R3 4.6259165) (R8 EXP OBS6) (R11 SIN R6) (R1 SUB -9.067087 R6)
+ (R11 MUL R7 R6) (R2 DIV 8.325058 R2) (R4 LOG OBS7) (R3 EXP R11)
+ (R2 SUB OBS4 OBS7) (R3 ADD OBS2 OBS9) (R1 EXP -3.562788377981484d0)
+ (R4 COS R9) (R5 COS OBS10) (R11 LOG R1) (R2 COS OBS9)
+ (R2 DIV OBS11 -7.527711403776747d0) (R4 SUB R4 OBS8) (R2 LOG OBS11)
+ (R11 SIN 5.3140182) (R7 MUL R5 R5) (R5 COS R1) (R8 COS OBS7) (R3 SUB OBS5 R3)
+ (R3 LOG OBS9) (R1 EXP -7.359785363505601d0) (R1 SIN -4.91426) (R6 LOG OBS2)
+ (R2 SUB R4 -6.498649) (R3 DIV -1.0844154 -2.9716995164335236d0)
+ (R10 DIV -9.111168 OBS11) (R5 SIN 3.9843516802128747d0) (R6 LOG OBS4)
+ (R2 SUB R10 -1.8026466) (R4 ADD OBS3 R2) (R2 SUB OBS11 R2)
+ (R11 DIV R2 -7.9086733) (R8 COS R11) (R7 MUL OBS10 -8.183596)
+ (R2 COS 0.6348467) (R7 DIV OBS8 -8.374352827022882d0) (R8 MUL 5.694645 R11)
+ (R7 SIN OBS9) (R1 EXP 0.521595) (R10 ADD R5 OBS4)
+ (R9 ADD -6.5358327334502615d0 R3) (R3 SIN R11) (R7 ADD R8 -4.9376106)
+ (R6 MUL OBS8 OBS1) (R11 EXP OBS5) (R2 EXP OBS11) (R9 MUL OBS2 R7)
+ (R3 DIV R3 R2) (R5 SUB R6 OBS8) (R11 DIV R11 R4) (R4 COS OBS5) (R7 COS R10)
+ (R7 LOG OBS3) (R2 COS R1) (R11 MUL R1 R7) (R1 LOG OBS6)
+ (R7 ADD OBS11 -3.0770063) (R8 COS OBS2) (R3 SUB R3 R9) (R10 DIV R2 7.7155724)
+ (R7 DIV OBS2 OBS6) (R2 SUB R9 -2.158827584238706d0)
+ (R11 ADD 3.0249321526241446d0 R5) (R10 ADD OBS6 R11) (R2 MUL R5 OBS3)
+ (R11 SUB OBS6 R3) (R6 LOG OBS5) (R1 ADD R2 R9) (R4 SUB R3 OBS7)
+ (R5 MUL OBS7 OBS10) (R2 MUL R2 OBS3) (R9 DIV R1 R6) (R4 ADD OBS11 -2.0719767)
+ (R4 EXP R10) (R2 SUB OBS8 OBS5) (R11 DIV R11 OBS5)
+ (R8 DIV 6.753533927298639d0 R3) (R11 SIN R11) (R1 SUB -0.10502815 OBS8)
+ (R2 SIN R11) (R3 ADD R3 R9) (R1 SIN R9) (R2 SIN R2) (R9 DIV R1 6.4365673)
+ (R2 SIN R2))
+((R10 COS OBS1) (R6 DIV -7.504352038465059d0 OBS4) (R5 EXP OBS11) (R7 SIN R4)
+ (R2 MUL OBS5 OBS5) (R3 MUL R10 OBS11) (R9 LOG R6) (R5 LOG OBS4) (R7 SIN R6)
+ (R4 MUL OBS7 9.581283463368377d0) (R6 ADD R4 R8) (R3 DIV R3 OBS1)
+ (R1 DIV OBS4 -8.236006) (R7 EXP OBS8) (R3 SUB R3 OBS3))
+((R9 SUB -0.33387947 OBS11) (R6 LOG R9) (R10 SIN R5) (R3 MUL R6 OBS3)
+ (R7 MUL OBS4 OBS4) (R2 MUL OBS5 OBS5) (R4 COS R11) (R6 EXP OBS3)
+ (R9 SUB -2.9840279 OBS6) (R7 SIN -3.9818382) (R8 SIN OBS4)
+ (R1 MUL -3.1563687 OBS2) (R7 MUL R4 R1) (R9 SUB OBS5 3.4149298502215655d0)
+ (R10 MUL OBS11 -0.7943077) (R5 SIN R9) (R2 DIV R2 OBS8) (R10 MUL 3.3794289 R1)
+ (R7 SIN OBS7))
+#+end_example
+
+  Next, let's load our companion library for interacting with the MuJoCo Gymnasium environments.
+
+#+BEGIN_SRC lisp
+   (ql:quickload :bes-gym :force t)
+  #+END_SRC
+
+Now let's evaluate the best individual from each trial on our fixed seed from the Hopper-v5 environment.
+
+ #+BEGIN_SRC lisp
+   (defun rollout (genotype environment-name seed experiment)
+     (let* ((environment (py4cl:python-call "gym.make" environment-name))
+            (episode-reward 0)
+            (observation (reset environment seed)))
+       (loop repeat 1000
+             do (multiple-value-bind (obs rew term trunc) (step environment (bes:phenotype genotype experiment observation))
+                  (if (or term trunc)
+                      (return)
+                      (
+                        (setf episode-reward (+ episode-reward rew))
+                        (setf observation obs)))))
+       (format t "Episode finished on environment ~A and seed ~A. Total reward: ~A~%" environment-name seed episode-reward)
+       (log-to-evaluations-file environment-name seed episode-reward)
+       episode-reward))
+  #+END_SRC
+
+#+RESULTS:
+: ROLLOUT
+

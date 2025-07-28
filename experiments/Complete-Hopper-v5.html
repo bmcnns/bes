@@ -1,0 +1,514 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2025-07-28 Mon 13:33 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hopper-Expert-v5</title>
+<meta name="author" content="Bryce MacInnis" />
+<meta name="generator" content="Org Mode" />
+<style>
+  #content { max-width: 60em; margin: auto; }
+  .title  { text-align: center;
+             margin-bottom: .2em; }
+  .subtitle { text-align: center;
+              font-size: medium;
+              font-weight: bold;
+              margin-top:0; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { font-family: monospace; color: green; }
+  .priority { font-family: monospace; color: orange; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #e6e6e6;
+    border-radius: 3px;
+    background-color: #f2f2f2;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: auto;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    top: -8px;
+    right: 12px;
+    padding: 3px;
+    color: #555;
+    background-color: #f2f2f299;
+  }
+  pre.src:hover:before { display: inline; margin-top: 14px;}
+  /* Languages per Org manual */
+  pre.src-asymptote:before { content: 'Asymptote'; }
+  pre.src-awk:before { content: 'Awk'; }
+  pre.src-authinfo::before { content: 'Authinfo'; }
+  pre.src-C:before { content: 'C'; }
+  /* pre.src-C++ doesn't work in CSS */
+  pre.src-clojure:before { content: 'Clojure'; }
+  pre.src-css:before { content: 'CSS'; }
+  pre.src-D:before { content: 'D'; }
+  pre.src-ditaa:before { content: 'ditaa'; }
+  pre.src-dot:before { content: 'Graphviz'; }
+  pre.src-calc:before { content: 'Emacs Calc'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-fortran:before { content: 'Fortran'; }
+  pre.src-gnuplot:before { content: 'gnuplot'; }
+  pre.src-haskell:before { content: 'Haskell'; }
+  pre.src-hledger:before { content: 'hledger'; }
+  pre.src-java:before { content: 'Java'; }
+  pre.src-js:before { content: 'Javascript'; }
+  pre.src-latex:before { content: 'LaTeX'; }
+  pre.src-ledger:before { content: 'Ledger'; }
+  pre.src-lisp:before { content: 'Lisp'; }
+  pre.src-lilypond:before { content: 'Lilypond'; }
+  pre.src-lua:before { content: 'Lua'; }
+  pre.src-matlab:before { content: 'MATLAB'; }
+  pre.src-mscgen:before { content: 'Mscgen'; }
+  pre.src-ocaml:before { content: 'Objective Caml'; }
+  pre.src-octave:before { content: 'Octave'; }
+  pre.src-org:before { content: 'Org mode'; }
+  pre.src-oz:before { content: 'OZ'; }
+  pre.src-plantuml:before { content: 'Plantuml'; }
+  pre.src-processing:before { content: 'Processing.js'; }
+  pre.src-python:before { content: 'Python'; }
+  pre.src-R:before { content: 'R'; }
+  pre.src-ruby:before { content: 'Ruby'; }
+  pre.src-sass:before { content: 'Sass'; }
+  pre.src-scheme:before { content: 'Scheme'; }
+  pre.src-screen:before { content: 'Gnu Screen'; }
+  pre.src-sed:before { content: 'Sed'; }
+  pre.src-sh:before { content: 'shell'; }
+  pre.src-sql:before { content: 'SQL'; }
+  pre.src-sqlite:before { content: 'SQLite'; }
+  /* additional languages in org.el's org-babel-load-languages alist */
+  pre.src-forth:before { content: 'Forth'; }
+  pre.src-io:before { content: 'IO'; }
+  pre.src-J:before { content: 'J'; }
+  pre.src-makefile:before { content: 'Makefile'; }
+  pre.src-maxima:before { content: 'Maxima'; }
+  pre.src-perl:before { content: 'Perl'; }
+  pre.src-picolisp:before { content: 'Pico Lisp'; }
+  pre.src-scala:before { content: 'Scala'; }
+  pre.src-shell:before { content: 'Shell Script'; }
+  pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+  /* additional language identifiers per "defun org-babel-execute"
+       in ob-*.el */
+  pre.src-cpp:before  { content: 'C++'; }
+  pre.src-abc:before  { content: 'ABC'; }
+  pre.src-coq:before  { content: 'Coq'; }
+  pre.src-groovy:before  { content: 'Groovy'; }
+  /* additional language identifiers from org-babel-shell-names in
+     ob-shell.el: ob-shell is the only babel language using a lambda to put
+     the execution function name together. */
+  pre.src-bash:before  { content: 'bash'; }
+  pre.src-csh:before  { content: 'csh'; }
+  pre.src-ash:before  { content: 'ash'; }
+  pre.src-dash:before  { content: 'dash'; }
+  pre.src-ksh:before  { content: 'ksh'; }
+  pre.src-mksh:before  { content: 'mksh'; }
+  pre.src-posh:before  { content: 'posh'; }
+  /* Additional Emacs modes also supported by the LaTeX listings package */
+  pre.src-ada:before { content: 'Ada'; }
+  pre.src-asm:before { content: 'Assembler'; }
+  pre.src-caml:before { content: 'Caml'; }
+  pre.src-delphi:before { content: 'Delphi'; }
+  pre.src-html:before { content: 'HTML'; }
+  pre.src-idl:before { content: 'IDL'; }
+  pre.src-mercury:before { content: 'Mercury'; }
+  pre.src-metapost:before { content: 'MetaPost'; }
+  pre.src-modula-2:before { content: 'Modula-2'; }
+  pre.src-pascal:before { content: 'Pascal'; }
+  pre.src-ps:before { content: 'PostScript'; }
+  pre.src-prolog:before { content: 'Prolog'; }
+  pre.src-simula:before { content: 'Simula'; }
+  pre.src-tcl:before { content: 'tcl'; }
+  pre.src-tex:before { content: 'TeX'; }
+  pre.src-plain-tex:before { content: 'Plain TeX'; }
+  pre.src-verilog:before { content: 'Verilog'; }
+  pre.src-vhdl:before { content: 'VHDL'; }
+  pre.src-xml:before { content: 'XML'; }
+  pre.src-nxml:before { content: 'XML'; }
+  /* add a generic configuration mode; LaTeX export needs an additional
+     (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+  pre.src-conf:before { content: 'Configuration File'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.org-right  { text-align: center;  }
+  th.org-left   { text-align: center;   }
+  th.org-center { text-align: center; }
+  td.org-right  { text-align: right;  }
+  td.org-left   { text-align: left;   }
+  td.org-center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara { display: inline; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .equation-container {
+    display: table;
+    text-align: center;
+    width: 100%;
+  }
+  .equation {
+    vertical-align: middle;
+  }
+  .equation-label {
+    display: table-cell;
+    text-align: right;
+    vertical-align: middle;
+  }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  .org-svg { }
+</style>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">Hopper-Expert-v5
+<br />
+<span class="subtitle">Benchmarking BES on the Hopper-Expert-v5 dataset.</span>
+</h1>
+<p>
+First, let's load our package.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-lisp"><span style="color: #707183;">(</span>ql:quickload <span style="color: #483d8b;">:bes</span><span style="color: #707183;">)</span>
+<span style="color: #707183;">(</span><span style="color: #a020f0;">in-package</span> <span style="color: #483d8b;">:bes</span><span style="color: #707183;">)</span>
+</pre>
+</div>
+
+<p>
+Next, let's load our dataset.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-lisp"><span style="color: #707183;">(</span>defdataset *Hopper-Expert-v5*
+  <span style="color: #483d8b;">:path</span> <span style="color: #8b2252;">"~/.datasets/Hopper-Expert-v5"</span><span style="color: #707183;">)</span>
+</pre>
+</div>
+
+<p>
+And then let's define the experiment configuration.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-lisp"><span style="color: #707183;">(</span>defexperiment *Hopper-v5*
+  <span style="color: #483d8b;">:batch-size</span> 1000
+  <span style="color: #483d8b;">:instruction-set</span> <span style="color: #7388d6;">(</span>ADD SUB MUL DIV SIN COS LOG EXP<span style="color: #7388d6;">)</span>
+  <span style="color: #483d8b;">:registers</span> <span style="color: #7388d6;">(</span>R from 1 to 11<span style="color: #7388d6;">)</span> 
+  <span style="color: #483d8b;">:observations</span> <span style="color: #7388d6;">(</span>OBS from 1 to 11<span style="color: #7388d6;">)</span>
+  <span style="color: #483d8b;">:output-registers</span> <span style="color: #7388d6;">(</span>R from 1 to 3<span style="color: #7388d6;">)</span>
+  <span style="color: #483d8b;">:constant-range</span> '<span style="color: #7388d6;">(</span>-10.0 10.0<span style="color: #7388d6;">)</span>
+  <span style="color: #483d8b;">:objectives</span> <span style="color: #7388d6;">(</span>mean-squared-error<span style="color: #7388d6;">)</span>
+  <span style="color: #483d8b;">:tournament-size</span> 4
+  <span style="color: #483d8b;">:num-threads</span> 8
+  <span style="color: #483d8b;">:population-size</span> 1000
+  <span style="color: #483d8b;">:generations</span> 1000
+  <span style="color: #483d8b;">:minimum-program-length</span> 8
+  <span style="color: #483d8b;">:maximum-program-length</span> 128
+  <span style="color: #483d8b;">:observation-probability</span> 0.5
+  <span style="color: #483d8b;">:constant-probability</span> 0.5
+  <span style="color: #483d8b;">:mutate-instruction-probability</span> 1.0
+  <span style="color: #483d8b;">:mutate-register-probability</span> 0.5
+  <span style="color: #483d8b;">:mutate-operation-probability</span> 0.25
+  <span style="color: #483d8b;">:mutate-constant-probability</span> 0.25
+  <span style="color: #483d8b;">:add-instruction-probability</span> 1.0
+  <span style="color: #483d8b;">:delete-instruction-probability</span> 1.0
+  <span style="color: #483d8b;">:swap-instruction-probability</span> 1.0
+  <span style="color: #483d8b;">:constant-mutation-std</span> 1.0
+  <span style="color: #483d8b;">:maximum-instruction-count</span> 256<span style="color: #707183;">)</span>
+</pre>
+</div>
+
+<pre class="example">
+*HOPPER-V5*
+</pre>
+
+
+<p>
+Now let's run the evolution, since we're benchmarking we'll do this over 10 trials.
+Each time it'll produce a file called results.csv, so we'll take this and rename it for each trial.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-lisp"><span style="color: #707183;">(</span><span style="color: #a020f0;">defparameter</span> <span style="color: #a0522d;">*best-individuals*</span> <span style="color: #7388d6;">(</span>make-hash-table<span style="color: #7388d6;">)</span><span style="color: #707183;">)</span>
+
+<span style="color: #707183;">(</span><span style="color: #a020f0;">defun</span> <span style="color: #0000ff;">store-best-individual</span> <span style="color: #7388d6;">(</span>trial-id genotype<span style="color: #7388d6;">)</span>
+  <span style="color: #7388d6;">(</span>setf <span style="color: #909183;">(</span>gethash trial-id *best-individuals*<span style="color: #909183;">)</span> genotype<span style="color: #7388d6;">)</span><span style="color: #707183;">)</span>
+
+<span style="color: #707183;">(</span><span style="color: #a020f0;">defun</span> <span style="color: #0000ff;">get-best-individual</span> <span style="color: #7388d6;">(</span>trial-id<span style="color: #7388d6;">)</span>
+  <span style="color: #7388d6;">(</span>gethash trial-id *best-individuals*<span style="color: #7388d6;">)</span><span style="color: #707183;">)</span>
+
+<span style="color: #707183;">(</span><span style="color: #a020f0;">loop</span> for trial from 1 to 10
+      do 
+         <span style="color: #7388d6;">(</span>format t <span style="color: #8b2252;">"Starting trial ~A/~A...~%"</span> trial 10<span style="color: #7388d6;">)</span>
+         <span style="color: #7388d6;">(</span>ensure-directories-exist <span style="color: #8b2252;">"runs/Hopper-Expert-v5/"</span><span style="color: #7388d6;">)</span>
+         <span style="color: #7388d6;">(</span><span style="color: #a020f0;">let*</span> <span style="color: #909183;">(</span><span style="color: #709870;">(</span>solutions <span style="color: #907373;">(</span>evolve *Hopper-v5* *Hopper-Expert-v5*<span style="color: #907373;">)</span><span style="color: #709870;">)</span>
+                <span style="color: #709870;">(</span>best-individual <span style="color: #907373;">(</span>car <span style="color: #6276ba;">(</span>argmin solutions #'cadr<span style="color: #6276ba;">)</span><span style="color: #907373;">)</span><span style="color: #709870;">)</span><span style="color: #909183;">)</span>
+           <span style="color: #909183;">(</span>store-best-individual trial best-individual<span style="color: #909183;">)</span><span style="color: #7388d6;">)</span>
+         <span style="color: #7388d6;">(</span>rename-file <span style="color: #8b2252;">"results.csv"</span> <span style="color: #909183;">(</span>format nil <span style="color: #8b2252;">"runs/Hopper-Expert-v5/results-~A.csv"</span> trial<span style="color: #909183;">)</span><span style="color: #7388d6;">)</span><span style="color: #707183;">)</span>
+</pre>
+</div>
+
+<p>
+And now let's record our best individuals
+</p>
+
+<div class="org-src-container">
+<pre class="src src-lisp"><span style="color: #707183;">(</span><span style="color: #a020f0;">loop</span> for trial from 1 to 10
+      do <span style="color: #7388d6;">(</span>format t <span style="color: #8b2252;">"~A~%"</span> <span style="color: #909183;">(</span>get-best-individual trial<span style="color: #909183;">)</span><span style="color: #7388d6;">)</span><span style="color: #707183;">)</span>
+</pre>
+</div>
+
+<pre class="example" id="orge8f35ae">
+((R5 SIN 8.81320803370232d0) (R2 LOG R10) (R9 DIV R11 OBS3) (R10 EXP OBS3)
+ (R4 MUL R4 0.47595215) (R7 SIN R8) (R5 MUL R4 R7) (R6 SIN R3) (R9 SUB OBS8 R5)
+ (R8 SIN OBS5) (R4 SIN OBS1) (R10 SUB OBS11 -6.834655963905221d0) (R5 EXP OBS3)
+ (R10 LOG R9) (R11 LOG OBS8) (R9 SIN R10) (R8 MUL -5.309868 -4.5767117)
+ (R9 EXP OBS10) (R5 SIN R5) (R10 DIV OBS11 R8) (R4 DIV OBS4 -0.38181782)
+ (R6 SUB -4.2689705 R3) (R4 EXP OBS6) (R7 ADD OBS2 R7) (R8 EXP OBS6)
+ (R3 LOG R9) (R10 MUL R10 -1.9049960294422237d0) (R9 COS OBS5) (R3 LOG OBS10)
+ (R11 ADD R8 0.38790226) (R5 ADD R11 OBS9) (R11 SUB OBS11 OBS3) (R6 EXP R2)
+ (R6 MUL OBS2 -9.028494) (R8 MUL OBS7 2.336378) (R5 SIN R5) (R3 SIN OBS2)
+ (R7 LOG R5) (R2 SUB R11 9.615404) (R7 EXP R11) (R8 SUB R8 OBS3) (R2 COS OBS4)
+ (R7 LOG OBS4) (R3 DIV R3 R7) (R10 EXP 1.866349024819604d0) (R1 SIN OBS11)
+ (R6 ADD R7 0.7256070923492559d0) (R6 EXP OBS6) (R5 ADD OBS5 R1)
+ (R6 ADD R4 OBS4) (R1 DIV OBS11 -4.64148559886477d0) (R1 LOG OBS3)
+ (R2 SIN OBS10) (R3 MUL R3 -3.4153795) (R1 SUB -2.0905614 OBS8)
+ (R11 MUL -9.524391 OBS8) (R2 SUB -6.69809628607603d0 OBS2)
+ (R10 SUB -0.52272034 OBS2) (R6 SUB OBS4 -0.20968246) (R6 MUL R6 R10)
+ (R1 LOG OBS5) (R8 EXP R7) (R11 EXP R1) (R7 DIV R1 R6)
+ (R7 DIV -1.200979927993807d0 OBS4) (R1 ADD R9 -6.793484985833459d0)
+ (R2 SUB -9.395609 R9) (R5 ADD OBS5 R8) (R7 EXP R9) (R4 ADD R6 R10)
+ (R11 DIV R8 R2) (R7 SUB R3 R6) (R3 MUL OBS7 R7)
+ (R8 ADD -2.0908408350077776d0 OBS7) (R1 LOG OBS10) (R1 SIN OBS11)
+ (R8 DIV -0.5310848121288427d0 R2) (R5 DIV R10 OBS1) (R8 LOG 4.8287373)
+ (R11 DIV 6.840099055845352d0 OBS10) (R5 DIV 1.2684803 OBS4) (R11 LOG OBS10)
+ (R2 MUL OBS5 OBS5) (R10 EXP -0.0064105988) (R11 EXP R3) (R7 DIV R8 R1)
+ (R9 DIV OBS4 OBS7) (R10 MUL OBS7 4.678606960275734d0) (R1 LOG R11)
+ (R8 MUL R1 R8) (R6 EXP OBS10) (R10 SIN R1) (R1 LOG R11)
+ (R4 ADD 7.9720783 OBS1) (R7 COS R3) (R4 LOG R7) (R3 EXP 2.5884771)
+ (R9 EXP 4.904532117956475d0) (R10 COS -10.323587843170666d0) (R7 EXP R5)
+ (R2 DIV R2 R6) (R3 COS OBS1) (R11 MUL R3 OBS11) (R7 MUL -3.5240626 R7)
+ (R7 SIN R8) (R2 SUB R2 R7) (R3 MUL R3 R11) (R8 SUB R3 1.836915))
+((R8 DIV R10 R3) (R2 SIN 0.019774437) (R9 MUL -2.670461824056804d0 R9)
+ (R4 DIV R7 R2) (R8 LOG OBS3) (R4 MUL -1.2672443 OBS6)
+ (R9 SIN 4.400985399261746d0) (R4 EXP OBS2) (R6 SIN R7)
+ (R6 ADD R8 -0.015918732) (R6 SUB OBS6 OBS4) (R6 DIV OBS4 2.2766405501477553d0)
+ (R5 COS OBS2) (R8 MUL R9 2.0869151967416038d0) (R10 SUB -5.0241804 R8)
+ (R9 ADD R5 -7.474234) (R4 COS OBS4) (R6 SIN R11) (R9 SUB OBS9 R10)
+ (R11 SIN R7) (R10 SUB -2.8572345 R6) (R5 SUB -6.512362662130903d0 OBS6)
+ (R7 ADD R4 OBS6) (R10 LOG OBS8) (R5 LOG OBS5) (R1 EXP OBS10) (R6 SIN R9)
+ (R7 ADD OBS5 R2) (R3 EXP R7) (R5 MUL R1 OBS9) (R5 EXP R9) (R8 ADD R2 OBS5)
+ (R2 ADD -2.1940494 R9) (R5 LOG OBS8) (R7 LOG OBS7) (R3 SUB R4 1.3741856)
+ (R11 SIN OBS10) (R11 MUL OBS6 OBS7) (R10 DIV OBS4 R9) (R1 SUB OBS8 OBS1)
+ (R2 COS OBS1) (R7 SIN R6) (R1 ADD R10 R4) (R7 MUL R10 OBS9) (R9 ADD OBS6 R11)
+ (R7 MUL OBS2 -0.14108658) (R1 DIV R11 6.104313) (R5 LOG R5) (R11 EXP R5)
+ (R7 SUB 5.27215047987063d0 OBS5) (R7 ADD R7 OBS7) (R5 EXP OBS7)
+ (R1 COS -8.472403) (R10 COS R8) (R9 ADD R1 R9)
+ (R8 SUB -4.272602223136911d0 OBS4) (R7 EXP R1) (R2 SIN OBS8) (R6 DIV R4 OBS11)
+ (R4 EXP OBS6) (R2 EXP OBS8) (R4 ADD OBS3 OBS11) (R3 SIN R9) (R11 SIN R4)
+ (R10 ADD OBS11 6.793236371984557d0) (R2 COS OBS5) (R1 LOG R2) (R2 COS OBS4)
+ (R10 COS OBS3) (R9 SIN R8) (R10 DIV R9 9.437807682705607d0)
+ (R7 SUB R4 7.189936374286071d0) (R11 SUB R3 R4) (R2 SIN OBS8)
+ (R6 ADD R10 OBS1) (R10 SIN R9) (R5 EXP R7) (R6 MUL -6.5074897 R5) (R7 COS R7)
+ (R4 EXP 4.964035368250424d0) (R1 SUB -1.9346409 OBS6) (R5 MUL OBS5 OBS5)
+ (R2 COS OBS11) (R9 SIN R11) (R6 DIV R11 R5) (R4 LOG R4) (R11 EXP OBS6)
+ (R5 ADD R5 OBS2) (R8 ADD R10 R10) (R10 MUL OBS2 R1) (R10 ADD -0.2202034 R5)
+ (R8 LOG OBS4) (R2 LOG R6) (R2 SUB R2 R5) (R9 EXP OBS1) (R11 DIV OBS7 OBS4)
+ (R10 ADD R10 R8) (R9 COS R1) (R5 SUB R7 R8) (R3 MUL R2 OBS3)
+ (R9 SUB 3.49769377402912d0 R7) (R9 LOG R11) (R1 MUL OBS2 -4.519918)
+ (R10 SIN R10) (R7 EXP R9) (R2 SUB OBS2 R5) (R1 MUL R1 R7) (R1 SIN R1)
+ (R3 MUL OBS1 R3) (R10 ADD R10 OBS2) (R11 LOG OBS11) (R8 SIN R9)
+ (R11 DIV -4.427470853248051d0 OBS6) (R1 SIN R1) (R9 ADD R2 R9)
+ (R11 SUB 5.3006693356380366d0 R4) (R9 COS R7) (R2 SIN R10) (R4 MUL OBS7 R6))
+((R4 LOG R5) (R6 SIN -1.5995932) (R9 DIV OBS9 OBS8) (R1 SUB R2 OBS2)
+ (R8 MUL OBS6 -3.1666899906625705d0) (R7 MUL R9 -6.017413695078524d0)
+ (R11 SIN OBS4) (R4 COS R2) (R9 EXP OBS3) (R6 DIV OBS4 R1) (R7 ADD OBS7 OBS2)
+ (R10 EXP OBS3) (R7 SIN OBS1) (R9 EXP R6) (R2 DIV R7 OBS10)
+ (R8 MUL R7 -9.626797) (R7 ADD R10 OBS1) (R2 ADD OBS3 R2)
+ (R7 DIV R10 -7.009437952495652d0) (R4 ADD -7.619512 OBS9) (R11 SIN R11)
+ (R11 DIV OBS3 OBS11) (R6 DIV R2 R7) (R6 SUB R7 R10) (R6 COS R11)
+ (R1 MUL OBS6 R1) (R3 LOG OBS8) (R3 SIN R8))
+((R5 COS R3) (R4 DIV R9 6.210897824732884d0) (R11 DIV OBS5 OBS11)
+ (R10 MUL R3 R6) (R2 ADD -6.517868 OBS6) (R9 COS OBS11)
+ (R6 MUL 0.7889270080325934d0 R3) (R9 EXP R11) (R2 COS R7)
+ (R1 MUL -3.10534 OBS2) (R5 ADD R5 2.374463) (R3 SIN R2) (R2 SIN R6)
+ (R2 LOG OBS1) (R3 ADD R7 OBS10) (R10 LOG R9) (R8 EXP R6) (R10 LOG R5)
+ (R1 SIN R1) (R8 MUL 4.616762743991166d0 R1) (R3 ADD OBS9 -7.176196607448434d0)
+ (R10 LOG R2) (R3 ADD R10 R9))
+((R2 MUL OBS7 OBS9) (R2 COS OBS11) (R9 SUB R10 OBS9) (R6 EXP R3)
+ (R8 MUL -9.756343307243972d0 OBS4) (R3 DIV R1 R5) (R5 COS OBS8)
+ (R1 SUB OBS11 0.543752297864862d0) (R9 SUB R10 -8.166954) (R10 SUB R10 R5)
+ (R10 DIV OBS2 OBS9) (R9 COS R4) (R1 MUL OBS7 R9) (R8 LOG R10) (R1 SIN R1)
+ (R1 EXP R9) (R11 LOG OBS5) (R5 EXP OBS1) (R1 SUB -2.1559024 OBS9) (R1 COS R6)
+ (R11 EXP OBS3) (R11 DIV R2 8.758144) (R1 COS OBS1) (R10 COS R6)
+ (R1 EXP -2.655661) (R1 DIV 6.909107917903756d0 R8) (R8 DIV OBS6 R4)
+ (R4 MUL OBS3 OBS4) (R6 MUL R10 OBS4) (R8 COS R3) (R8 ADD R3 R9) (R5 EXP OBS5)
+ (R3 SIN OBS8) (R6 DIV OBS2 OBS8) (R5 DIV OBS2 OBS2) (R7 SUB R7 R7)
+ (R11 COS OBS1) (R8 SIN OBS5) (R10 MUL -4.442067 R7) (R11 EXP OBS3) (R8 COS R7)
+ (R1 LOG R7) (R3 EXP OBS11) (R6 COS OBS9) (R7 DIV OBS4 R10) (R7 LOG R4)
+ (R4 SUB OBS7 R9) (R11 EXP OBS5) (R4 EXP OBS4) (R2 COS OBS8) (R10 COS R5)
+ (R9 LOG OBS9) (R10 SIN R9) (R6 EXP OBS8) (R8 DIV R8 R8) (R6 COS OBS10)
+ (R7 MUL R11 R3) (R9 ADD R9 -5.749047480238271d0) (R1 SIN OBS9)
+ (R6 DIV OBS8 R6) (R2 COS R11) (R6 SUB R7 R6) (R3 ADD R3 R1)
+ (R9 DIV OBS6 3.7716846) (R3 SUB R6 OBS8) (R2 MUL OBS8 -9.395807960912876d0)
+ (R5 DIV R6 R10) (R6 MUL 1.6362934 OBS2) (R3 SIN R4) (R3 COS OBS7)
+ (R3 EXP OBS9) (R1 LOG R1) (R10 SUB R7 OBS3) (R5 EXP R4) (R11 EXP R4)
+ (R3 SUB R1 OBS9) (R3 LOG R10) (R2 EXP R11) (R4 SUB OBS11 -1.665600637243537d0)
+ (R11 SUB R10 R4) (R6 ADD R3 OBS5) (R9 DIV OBS3 -10.111398795288828d0)
+ (R10 SIN OBS7) (R4 LOG -7.528076) (R10 SIN R10) (R7 EXP R6) (R9 LOG OBS4)
+ (R5 ADD 0.5386438166957853d0 R8) (R3 LOG R9) (R4 SUB R10 OBS9) (R7 SUB R10 R7)
+ (R8 EXP R1) (R7 MUL R7 R6) (R5 DIV R5 -6.8465185) (R2 MUL OBS9 R7)
+ (R3 DIV -0.8417225 R7) (R2 MUL R2 R2) (R5 MUL OBS7 0.6138687)
+ (R1 SIN -6.093116284256577d0) (R10 DIV OBS8 R7) (R10 DIV -8.779659 R2)
+ (R11 DIV OBS8 6.2303734) (R2 MUL R11 6.124263460366885d0)
+ (R2 DIV 1.1626577 OBS11) (R5 SIN OBS7) (R8 SIN R2) (R1 MUL OBS2 R10)
+ (R10 SUB R8 R1) (R2 ADD R10 R9) (R1 MUL OBS1 R1) (R10 SUB R11 7.186098)
+ (R3 ADD R3 R8) (R8 LOG R6) (R2 SIN R2))
+((R1 EXP OBS6) (R5 DIV OBS11 OBS9) (R9 DIV R7 R7) (R11 MUL R5 R8) (R2 COS OBS9)
+ (R4 MUL OBS9 R11) (R3 SIN OBS2) (R5 ADD -5.2342224 R5) (R10 EXP OBS5)
+ (R10 LOG R10) (R6 SIN OBS11) (R3 LOG -8.011303) (R11 EXP OBS1) (R7 EXP OBS1)
+ (R3 COS R7) (R3 SIN OBS11) (R6 LOG OBS10) (R11 COS OBS2) (R10 DIV R8 8.270838)
+ (R3 ADD OBS6 OBS8) (R2 ADD 2.053066159736443d0 R5)
+ (R3 ADD -0.9310295512761164d0 -7.4150896) (R7 MUL R11 OBS3)
+ (R6 MUL R6 7.233982) (R11 SUB OBS1 OBS9) (R10 COS R7) (R11 SUB R9 OBS4)
+ (R2 COS R4) (R7 SIN OBS8) (R5 DIV -8.367858 R6) (R9 MUL 0.28131962 R2)
+ (R4 MUL OBS7 R5) (R5 SUB OBS9 R7) (R2 DIV R6 R8) (R11 COS OBS5)
+ (R4 SUB R4 -9.179375) (R11 SUB R2 8.332014) (R10 DIV R4 OBS11) (R8 SUB R8 R5)
+ (R5 MUL 3.7823086 R6) (R5 ADD OBS11 R10) (R9 LOG 2.6822987219252847d0)
+ (R10 COS R10) (R8 COS 7.957684816901913d0) (R5 SUB R5 OBS8)
+ (R10 ADD R8 8.022847279039613d0) (R1 SUB R8 7.893879) (R4 DIV R5 -1.4243717)
+ (R4 SUB R4 OBS6) (R7 COS OBS2) (R5 MUL OBS1 OBS10) (R9 COS R7) (R1 EXP R7)
+ (R6 SUB OBS8 -5.249199539821058d0) (R10 ADD OBS8 -2.8390121) (R8 EXP R1)
+ (R3 LOG R7) (R2 MUL OBS5 OBS5) (R1 MUL OBS2 -3.5191965) (R11 ADD -5.231693 R4)
+ (R3 DIV R4 7.267065) (R1 SIN R1))
+((R2 MUL OBS5 OBS5) (R10 COS R6) (R11 ADD OBS8 5.742981)
+ (R4 SUB OBS4 3.5600452) (R3 SIN OBS6) (R3 MUL OBS11 0.04837036)
+ (R1 SUB -0.3952999 OBS3) (R11 EXP R2))
+((R3 ADD R5 7.7794) (R11 LOG R5) (R7 DIV OBS11 2.425027) (R9 EXP OBS11)
+ (R4 ADD OBS10 OBS7) (R3 COS -2.6971292) (R9 MUL R9 7.2543354) (R6 DIV OBS3 R9)
+ (R11 LOG OBS1) (R11 EXP OBS1) (R11 COS OBS11) (R2 MUL OBS5 OBS5)
+ (R11 SUB OBS5 4.184302557295574d0) (R10 LOG R11) (R5 LOG R9)
+ (R3 SUB OBS3 OBS7) (R10 EXP R8) (R9 SUB R9 R2) (R1 MUL OBS2 -3.6178327)
+ (R11 MUL R5 R6) (R3 DIV R5 R9))
+((R11 MUL OBS3 R7) (R5 SIN R4) (R10 MUL R1 2.1603317) (R11 COS OBS10)
+ (R5 LOG OBS11) (R9 LOG -6.853592209494352d0) (R9 COS R11)
+ (R6 ADD R8 -0.00561432256350014d0) (R11 COS OBS2) (R2 COS OBS1) (R3 LOG OBS2)
+ (R1 EXP R1) (R10 DIV OBS4 R3) (R3 ADD R4 OBS11) (R11 SIN OBS5)
+ (R2 DIV 5.444526771966771d0 OBS7) (R4 SIN R6) (R5 LOG R6) (R8 LOG OBS5)
+ (R5 LOG OBS8) (R11 LOG R11) (R7 LOG R8) (R10 MUL R1 -6.7245746) (R1 DIV R7 R9)
+ (R7 DIV -7.241254 OBS2) (R10 DIV R3 OBS11) (R10 EXP R10) (R2 EXP R4)
+ (R4 COS OBS1) (R10 LOG OBS1) (R4 MUL OBS7 OBS8)
+ (R5 SUB 3.8553184337437396d0 R1) (R10 COS R2) (R9 DIV 6.8852634 OBS10)
+ (R1 DIV R1 OBS2) (R4 MUL OBS5 OBS5) (R9 MUL OBS11 OBS6) (R6 LOG R4)
+ (R5 EXP R5) (R3 SIN OBS5) (R8 ADD R2 R10) (R11 MUL R6 -1.1100693)
+ (R8 SIN OBS4) (R10 ADD 7.829156651985393d0 OBS7) (R4 EXP R6)
+ (R11 SUB OBS11 5.3245247148140065d0) (R5 COS OBS5) (R9 EXP OBS9)
+ (R8 DIV 7.8966334825096745d0 R5) (R1 EXP R8) (R11 DIV R6 OBS4) (R2 COS OBS3)
+ (R3 MUL OBS11 R11) (R4 SUB OBS2 OBS9) (R6 SIN -8.642561) (R1 LOG R3)
+ (R7 MUL OBS5 R7) (R6 DIV R9 R9) (R4 COS OBS10)
+ (R10 ADD 4.729792703349463d0 OBS2) (R4 LOG OBS10) (R11 DIV R11 R4)
+ (R9 EXP OBS4) (R7 SUB OBS11 OBS5) (R3 MUL R11 R1) (R11 DIV R11 R6) (R5 LOG R1)
+ (R4 COS R8) (R2 MUL OBS1 -5.3039885) (R2 MUL R11 OBS10) (R7 ADD -9.61987 R11)
+ (R6 EXP R10) (R8 EXP R11) (R1 MUL R3 OBS2) (R2 MUL R2 R2) (R2 DIV R8 R2)
+ (R2 ADD OBS2 R2) (R5 COS OBS3))
+((R3 COS OBS8) (R9 LOG R3) (R6 LOG 3.025093533626469d0) (R5 MUL R3 OBS2)
+ (R11 SIN OBS1) (R10 LOG R2) (R4 SIN OBS9) (R3 EXP OBS4)
+ (R7 MUL -7.51849537678129d0 OBS7) (R8 MUL -7.6049542 R10) (R8 COS OBS7)
+ (R5 COS R7) (R2 SIN R4) (R11 SIN R9) (R7 COS OBS7)
+ (R8 DIV -4.0195324597854984d0 OBS11) (R8 EXP R3)
+ (R4 ADD R1 -9.692914756084573d0) (R11 SUB OBS3 OBS7)
+ (R8 MUL -3.7422562 3.5922411403239805d0) (R9 MUL OBS6 OBS7) (R8 DIV R2 OBS11)
+ (R2 LOG R10) (R7 LOG R1) (R4 DIV OBS10 8.591720560406209d0)
+ (R11 DIV R5 -9.258857) (R2 LOG OBS3) (R5 SUB 9.125071017819327d0 OBS9)
+ (R9 ADD OBS1 -1.8764292488132084d0) (R4 COS OBS6) (R8 SIN R2)
+ (R10 SIN -0.9754391) (R6 EXP OBS7) (R8 ADD R8 -2.311766613414045d0)
+ (R3 MUL R5 OBS8) (R4 EXP R3) (R6 ADD 0.26103783 OBS11) (R11 EXP OBS10)
+ (R11 DIV 9.870361 R1) (R8 LOG OBS2) (R4 LOG R2) (R9 COS R4) (R7 ADD R6 OBS10)
+ (R8 MUL 2.2557468 R9) (R10 DIV R1 R6) (R4 EXP OBS11) (R11 ADD R1 -9.203186)
+ (R2 MUL 6.579792 R4) (R5 EXP R7) (R1 COS OBS4) (R5 ADD OBS2 R5)
+ (R7 DIV OBS6 R9) (R7 COS OBS9) (R7 MUL OBS8 R6) (R11 MUL OBS5 R2) (R3 SIN R7)
+ (R3 SUB 1.1545038 R5) (R10 DIV R3 R2) (R4 SIN OBS11) (R2 SUB OBS5 R10)
+ (R3 DIV R2 R5) (R6 DIV OBS10 OBS2) (R11 MUL R1 R3) (R10 EXP R10) (R6 SIN OBS1)
+ (R11 SIN 1.5646439) (R9 ADD 6.748579 1.0225439) (R2 DIV R7 R11)
+ (R4 DIV OBS6 OBS3) (R9 COS R6) (R7 COS OBS2) (R11 MUL R9 6.9443054)
+ (R7 MUL OBS5 OBS1) (R5 SIN OBS10) (R8 COS OBS9) (R2 ADD OBS5 R9)
+ (R11 MUL OBS4 -9.533837252617664d0) (R6 DIV R9 R9) (R11 ADD R11 R6)
+ (R8 DIV OBS3 OBS1) (R3 MUL R3 OBS1) (R2 ADD OBS1 OBS5) (R9 ADD R3 OBS3)
+ (R2 LOG R2) (R2 MUL OBS1 R2) (R11 DIV 6.2442245 OBS8) (R8 SIN OBS5)
+ (R6 DIV R3 5.319714641171551d0) (R4 LOG OBS6) (R9 ADD OBS4 3.1789923)
+ (R7 ADD 1.5291071 OBS6) (R8 DIV OBS5 0.5018911725190287d0) (R4 SUB OBS10 OBS1)
+ (R8 COS OBS9) (R8 LOG R5) (R10 DIV R10 R2) (R6 DIV R9 7.4551597513913235d0)
+ (R9 COS -4.718489761282937d0) (R6 COS R7) (R5 EXP R10)
+ (R9 DIV R7 3.323965390200047d0) (R5 SUB OBS9 OBS10)
+ (R4 ADD 4.710272759163225d0 R9) (R4 EXP R10) (R4 SUB R4 R5) (R8 LOG R9)
+ (R10 SIN R10) (R6 LOG OBS7) (R6 MUL R4 OBS9) (R3 SIN R3)
+ (R1 SUB OBS11 -2.4004593297497165d0) (R9 ADD OBS2 R5) (R2 SIN R10)
+ (R6 MUL R4 OBS2) (R10 SUB OBS4 -9.14622553014276d0)
+ (R1 DIV -3.053790472480075d0 OBS4) (R5 COS R1) (R1 MUL OBS3 R6))
+</pre>
+
+<p>
+Next, let's load our companion library for interacting with the MuJoCo Gymnasium environments.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-lisp"><span style="color: #707183;">(</span>ql:quickload <span style="color: #483d8b;">:bes-gym</span> <span style="color: #483d8b;">:force</span> t<span style="color: #707183;">)</span>
+</pre>
+</div>
+
+
+<p>
+Now let's evaluate the best individual from each trial on 10 seeds from the Hopper-v5 environment.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-lisp"><span style="color: #707183;">(</span><span style="color: #a020f0;">loop</span> for trial from 1 to 10
+      do <span style="color: #7388d6;">(</span><span style="color: #a020f0;">loop</span> for seed in '<span style="color: #909183;">(</span>738491 204583 991627 458720 174392 618305 837154 265009 781463 549128<span style="color: #909183;">)</span>
+               do <span style="color: #909183;">(</span><span style="color: #a020f0;">let</span> <span style="color: #709870;">(</span><span style="color: #907373;">(</span>champion <span style="color: #6276ba;">(</span>get-best-individual trial<span style="color: #6276ba;">)</span><span style="color: #907373;">)</span><span style="color: #709870;">)</span>
+                    <span style="color: #709870;">(</span>bes-gym::rollout champion <span style="color: #8b2252;">"Hopper-v5"</span> seed *Hopper-v5*<span style="color: #709870;">)</span><span style="color: #909183;">)</span><span style="color: #7388d6;">)</span>
+         <span style="color: #7388d6;">(</span>rename-file <span style="color: #8b2252;">"evaluations.csv"</span> <span style="color: #909183;">(</span>format nil <span style="color: #8b2252;">"runs/Hopper-Expert-v5/evaluations-~A.csv"</span> trial<span style="color: #909183;">)</span><span style="color: #7388d6;">)</span><span style="color: #707183;">)</span>
+</pre>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="author">Author: Bryce MacInnis</p>
+<p class="date">Created: 2025-07-28 Mon 13:33</p>
+<p class="validation"><a href="https://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>

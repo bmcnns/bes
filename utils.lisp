@@ -99,7 +99,7 @@
 (defun normal (mean std)
   "Return a single float from a Gaussian distribution with given
    MEAN and STD using the Box-Muller transform."
-  (let* ((u1 (random 1.0))
+  (let* ((u1 (max 1e-10 (random 1.0)))
          (u2 (random 1.0))
          (z0 (* (sqrt (* -2 (log u1)))
                 (cos (* 2 pi u2)))))

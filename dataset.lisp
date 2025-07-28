@@ -1,6 +1,6 @@
 (in-package :bes)
 
-(defmacro defdataset (name)
+(defmacro defdataset (name &key path)
   "Define a global variable containing a dataset loaded from 'datasets/<name>'.
    The dataset file should be a serialized Lisp object readable by 'read'.
    The NAME symbol will be bound as a global variable.
@@ -9,7 +9,9 @@
    (defdataset *Minimal-Hopper-Expert-v5*) => loads 'datasets/Minimal-Hopper-Expert-v5'
    and binds to *Minimal-Hopper-Expert-v5*"
   (let* ((dataset-name (string-trim "*" (symbol-name name)))
-         (file-name (concatenate 'string "datasets/" dataset-name)))
+         (file-name (if path
+                        path
+                        (concatenate 'string "datasets/" dataset-name))))
     `(defparameter ,name
        (with-open-file (in ,file-name :direction :input)
          (read in)))))

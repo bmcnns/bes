@@ -43,7 +43,7 @@
   `(defparameter ,name (loop repeat ,size
                              collect (new-genotype ,experiment))))
 
-(defun multi-objective-optimization (dataset population experiment)
+(defun multi-objective-optimization (dataset population experiment generation)
   "Perform one generation of NSGA-II multi-objective optimization.
    Takes DATASET, current POPULATION, and EXPERIMENT configuration.
    Returns the next population using non-dominated sorting and crowding distance."
@@ -67,9 +67,10 @@
                            (selected (subseq sorted-by-crowding 0 remaining)))
                       (setf ranked-next-population (nconc ranked-next-population selected)))
                     (return)))))
+    (report ranked-population experiment generation)
     (mapcar #'car ranked-next-population)))
 
-(defun single-objective-optimization (dataset population experiment)
+(defun single-objective-optimization (dataset population experiment generation)
   "Perform one generation of single-objective-optimization using tournament selection.
    Takes DATASET, current POPULATION and EXPERIMENT configuration.
    Returns the next generation after selection and mutation."
@@ -79,12 +80,11 @@
          (ranked-population
            (with-population population num-threads
              (let ((predictions (phenotype individual experiment observations)))
-               (fitness experiment individual actions predictions)))))
-    (-> ranked-population
-        (single-objective-selection experiment)
-        (with-population num-threads
-            (mutate individual experiment)))))
-  
+               (fitness experiment individual actions predictions))))
+         (new-population (mapcar #'car (single-objective-selection ranked-population experiment))))
+    (report ranked-population experiment generation)
+    (with-population new-population num-threads
+      (mutate individual experiment))))
 
 (defun evolutionary-loop (experiment dataset population generation &key evolution-strategy)
   "Run the evolutionary loop recursively for the given EXPERIMENT.
@@ -94,9 +94,7 @@
       population
       (let* ((batch (sample dataset experiment))
              (num-threads (experiment-num-threads experiment))
-             (next-population (funcall evolution-strategy batch population experiment)))
-        (format t "Generation ~A complete.~%" (1+ generation))
-        (force-output)
+             (next-population (funcall evolution-strategy batch population experiment generation)))
         (evolutionary-loop experiment dataset next-population (1+ generation) :evolution-strategy evolution-strategy))))
 
 (defun evolve (experiment dataset)
@@ -107,8 +105,8 @@
          (initial-population (loop repeat population-size
                                    collect (new-genotype experiment)))
          (final-population (if (> (length (experiment-objectives experiment)) 1)
-                               (evolutionary-loop experiment dataset initial-population 0 :evolution-strategy #'multi-objective-optimization)
-                               (evolutionary-loop experiment dataset initial-population 0 :evolution-strategy #'single-objective-optimization)))
+                               (evolutionary-loop experiment dataset initial-population 1 :evolution-strategy #'multi-objective-optimization)
+                               (evolutionary-loop experiment dataset initial-population 1 :evolution-strategy #'single-objective-optimization)))
          (evaluation-batch (sample dataset experiment)))
     (with-population final-population (experiment-num-threads experiment)
       (fitness experiment individual (actions evaluation-batch) (phenotype individual experiment (observations evaluation-batch))))))

@@ -31,7 +31,7 @@
    The number of selected individuals matches the target population size in EXPERIMENT."
   (let ((desired-population-size (experiment-population-size experiment)))
     (loop repeat desired-population-size
-          collect (tournament-selection ranked-population experiment))))
+          collect (tournament-selection ranked-population (experiment-tournament-size experiment)))))
 
 ;;; Multi-objective Optimization
 

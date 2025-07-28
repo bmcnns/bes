@@ -11,7 +11,7 @@
                 #:make-kernel
                 #:pmap
                 #:end-kernel)
-  (:export evolve defdataset defexperiment))
+  (:export evolve defdataset defexperiment phenotype))
 
 (in-package :bes)
                 

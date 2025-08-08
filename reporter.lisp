@@ -1,3 +1,5 @@
+(in-package :bes)
+
 (defun write-log-header (experiment)
   "Print a header row to *standard-output* showing column names for objectives
    (min/avg/max). Used at the start of logging for human-readable console output."

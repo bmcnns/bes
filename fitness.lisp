@@ -31,23 +31,6 @@
    This maps between a defined EXPERIMENT and the dynamic fitness
    function being generated to lazy evaluate objectives")
 
-                                        ; Fitness Wrappers 
-
-(defun minimize (fn)
-  "Wrap FN in a lambda that forwards arguments unchanged.
-   This is syntactic sugar for NSGA-II which assumes minimization."
-  (lambda (&rest args)
-    (apply fn args)))
-
-(defun maximize (fn)
-  "Wrap FN in a lambda that negates its output.
-   This transforms a maximization objective into a minimization one for NSGA-II."
-  (lambda (&rest args)
-    (let ((result (apply fn args)))
-      (if (listp result)
-          (mapcar #'- result)
-          (- result)))))
-
                                         ; Fitness Calculation
 
 (defun make-fitness-function (objectives)

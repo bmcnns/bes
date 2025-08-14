@@ -53,22 +53,28 @@
          (actions (actions dataset))
          (children (with-population population num-threads
                      (mutate individual experiment)))
-         (combined-population (append children parents))
-         (ranked-population (with-population combined-population num-threads
-                              (fitness experiment individual actions (phenotype individual experiment observations))))
-         (pareto-fronts (non-dominated-sorting ranked-population))
-         (ranked-next-population '()))
-    (loop for front in pareto-fronts
-          do (let ((remaining (- (length parents) (length ranked-next-population))))
-               (cond
-                 ((<= (length front) remaining)
-                  (setf ranked-next-population (nconc ranked-next-population front)))
-                 (t (let* ((sorted-by-crowding (sort-by-crowding-distance front))
-                           (selected (subseq sorted-by-crowding 0 remaining)))
-                      (setf ranked-next-population (nconc ranked-next-population selected)))
-                    (return)))))
-    (write-report ranked-population experiment generation)
-    (mapcar #'car ranked-next-population)))
+         (combined-population (append children parents)))
+    (let* ((residual-matrix (calculate-residual-matrix experiment observations actions combined-population))
+           (support-matrix (calculate-support-matrix residual-matrix)))
+      ;;(export-piecewise-fit experiment observations actions combined-population generation (format nil "new-residual-fit.csv"))
+      (let* ((ranked-population (with-population combined-population num-threads
+                                  ;; predictions is set to nil because we assume we're not doing MSE.
+                                  ;; we should eventually factor predictions outside of calculate-residual-matrix
+                                  ;; for compatibility of all objectives
+                                  (fitness experiment individual actions nil combined-population support-matrix residual-matrix)))
+             (pareto-fronts (non-dominated-sorting ranked-population))
+             (ranked-next-population '()))
+        (loop for front in pareto-fronts
+              do (let ((remaining (- (length parents) (length ranked-next-population))))
+                   (cond
+                     ((<= (length front) remaining)
+                      (setf ranked-next-population (nconc ranked-next-population front)))
+                     (t (let* ((sorted-by-crowding (sort-by-crowding-distance front))
+                               (selected (subseq sorted-by-crowding 0 remaining)))
+                          (setf ranked-next-population (nconc ranked-next-population selected)))
+                        (return)))))
+        (write-report ranked-population experiment generation)
+        (mapcar #'car ranked-next-population)))))
 
 (defun single-objective-optimization (dataset population experiment generation)
   "Perform one generation of single-objective-optimization using tournament selection.
@@ -108,5 +114,7 @@
                                (evolutionary-loop experiment dataset initial-population 1 :evolution-strategy #'multi-objective-optimization)
                                (evolutionary-loop experiment dataset initial-population 1 :evolution-strategy #'single-objective-optimization)))
          (evaluation-batch (sample dataset experiment)))
-    (with-population final-population (experiment-num-threads experiment)
-      (fitness experiment individual (actions evaluation-batch) (phenotype individual experiment (observations evaluation-batch))))))
+    (let* ((residual-matrix (calculate-residual-matrix experiment (observations evaluation-batch) (actions evaluation-batch) final-population))
+           (support-matrix (calculate-support-matrix residual-matrix)))
+      (with-population final-population (experiment-num-threads experiment)
+        (fitness experiment individual (actions evaluation-batch) nil final-population support-matrix residual-matrix)))))

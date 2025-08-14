@@ -25,8 +25,10 @@
           for avg = (/ (reduce #'+ fitness) (length fitness))
           for min = (reduce #'min fitness)
           for max = (reduce #'max fitness)
-          do (format t "~,3f / ~,3f / ~,3f~45T" min avg max))
+          do (format t "~,7f / ~,7f / ~,7f~45T" min avg max))
     (terpri)))
+
+
 
 (defun write-results-file-header (experiment)
   (let ((objectives (experiment-objectives experiment)))
@@ -56,10 +58,28 @@
                  (format stream ",~F,~F,~F" min avg max)))
       (terpri stream))))
 
+(defun write-multi-objective-results-file (ranked-population generation)
+  "Print a log entry to *standard-output* showing the metrics for each objective
+   per individual in RANKED-POPULATION at the given GENERATION."
+  (with-open-file (stream "results.csv"
+                          :direction :output
+                          :if-exists :append
+                          :if-does-not-exist :create)
+    (loop for individual in ranked-population
+          for i from 0
+              do (format stream "~A," generation)
+                 (format stream "~A" i)
+                 (loop for value in (cdr individual)
+                   do (format stream ",~A" value))
+             (terpri stream))))
+
 (defun write-report (ranked-population experiment generation)
   (if (= generation 1)
       (progn
         (write-log-header experiment)
-        (write-results-file-header experiment)))
-  (write-log ranked-population generation experiment)
-  (write-to-results-file ranked-population experiment generation))
+        (if (< (length (experiment-objectives experiment)) 2)
+            (write-results-file-header experiment))))
+  (if (> (length (experiment-objectives experiment)) 1)
+      (write-multi-objective-results-file ranked-population generation)
+      (write-to-results-file ranked-population experiment generation))
+  (write-log ranked-population generation experiment))

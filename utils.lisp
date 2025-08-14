@@ -115,25 +115,35 @@
               :element-type 'single-float
               :initial-contents (mapcar #'(lambda (x) (coerce x 'single-float)) lst)))
 
-(defun argmax (seq fn)
-  "Return the element in SEQ for which FN returns the highest value."
-  (let ((best (first seq))
-        (best-val (funcall fn (first seq))))
+(defun argmax (seq &optional fn)
+  "Return the element in SEQ for which FN returns the lowest value. If FN is nil, use the identity function."
+  (let* ((best (first seq))
+         (best-val (if fn
+                       (funcall fn best)
+                       best)))
     (dolist (item (rest seq) best)
-      (let ((val (funcall fn item)))
+      (let ((val (if fn
+                     (funcall fn item)
+                     item)))
         (when (> val best-val)
           (setf best item
                 best-val val))))))
 
-(defun argmin (seq fn)
-  "Return the element in SEQ for which FN returns the lowest value."
-  (let ((best (first seq))
-        (best-val (funcall fn (first seq))))
-    (dolist (item (rest seq) best)
-      (let ((val (funcall fn item)))
-        (when (< val best-val)
-          (setf best item
-                best-val val))))))
+(defun argmin (seq &optional fn)
+  "Return the index of the element in SEQ for which FN returns the lowest value.
+   If FN is nil, use the identity function."
+  (let ((best-idx 0)
+        (best-val (if fn
+                      (funcall fn (elt seq 0))
+                      (elt seq 0))))
+    (loop for i from 1 below (length seq)
+          for val = (if fn
+                        (funcall fn (elt seq i))
+                        (elt seq i))
+          when (< val best-val)
+            do (setf best-idx i
+                     best-val val))
+    best-idx))
 
 (defun column (matrix index)
   "Return the column at INDEX from a MATRIX (a list of lists)."

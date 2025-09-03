@@ -42,6 +42,7 @@
            population))
    population))
 
+;; unfortunately the same as below
 (defun non-dominated-sorting (ranked-population)
   "Perform non-dominated sorting on RANKED-POPULATION.
    Returns a list of fronts, where each front is a list of non-dominated individuals."
@@ -53,6 +54,7 @@
         (setf remaining (set-difference remaining front :test #'equal))))
     (nreverse fronts)))
 
+;; you did not write this and therefore you do not understand it
 (defun crowding-distances (front)
   "Compute crowding distance for each individual in FRONT.
    Returns an alist mapping genotypes to crowding distances.
@@ -82,6 +84,7 @@
                         (cons label (+ current-distance partial)))))))
                distances))))))
 
+;; same as above
 (defun sort-by-crowding-distance (front)
   "Return a new list of individuals from FRONT sorted by crowding distance in descending order.
    Used in NSGA-II to break ties within a Pareto front."

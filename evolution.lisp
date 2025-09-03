@@ -43,6 +43,8 @@
   `(defparameter ,name (loop repeat ,size
                              collect (new-genotype ,experiment))))
 
+;; Thought: See if we can reimplement this as a recursive function
+;; taking a list of objectives
 (defun multi-objective-optimization (dataset population experiment generation)
   "Perform one generation of NSGA-II multi-objective optimization.
    Takes DATASET, current POPULATION, and EXPERIMENT configuration.
@@ -52,30 +54,32 @@
          (observations (observations dataset))
          (actions (actions dataset))
          (children (with-population population num-threads
-                     (mutate individual experiment)))
+                                    (mutate individual experiment)))
          (combined-population (append children parents)))
-    (let* ((residual-matrix (calculate-residual-matrix experiment observations actions combined-population))
-           (support-matrix (calculate-support-matrix residual-matrix)))
-      ;;(export-piecewise-fit experiment observations actions combined-population generation (format nil "new-residual-fit.csv"))
-      (let* ((ranked-population (with-population combined-population num-threads
-                                  ;; predictions is set to nil because we assume we're not doing MSE.
-                                  ;; we should eventually factor predictions outside of calculate-residual-matrix
-                                  ;; for compatibility of all objectives
-                                  (fitness experiment individual actions nil combined-population support-matrix residual-matrix)))
-             (pareto-fronts (non-dominated-sorting ranked-population))
-             (ranked-next-population '()))
-        (loop for front in pareto-fronts
-              do (let ((remaining (- (length parents) (length ranked-next-population))))
-                   (cond
-                     ((<= (length front) remaining)
-                      (setf ranked-next-population (nconc ranked-next-population front)))
-                     (t (let* ((sorted-by-crowding (sort-by-crowding-distance front))
-                               (selected (subseq sorted-by-crowding 0 remaining)))
-                          (setf ranked-next-population (nconc ranked-next-population selected)))
-                        (return)))))
-        (write-report ranked-population experiment generation)
-        (mapcar #'car ranked-next-population)))))
+    (assign-errors-to-datapoints experiment observations actions combined-population)
+    (let* ((ranked-population (with-population combined-population num-threads
+                                               ;; predictions is set to nil because we assume we're not doing MSE.
+                                               ;; we should eventually factor predictions outside of calculate-residual-matrix
+                                               ;; for compatibility of all objectives
+                                               (fitness experiment individual actions nil)))
+           (pareto-fronts (non-dominated-sorting ranked-population))
+           (ranked-next-population '()))
+      (loop for front in pareto-fronts
+            do (let ((remaining (- (length parents) (length ranked-next-population))))
+                 (cond
+                  ((<= (length front) remaining)
+                   (setf ranked-next-population (nconc ranked-next-population front)))
+                  (t (let* ((sorted-by-crowding (sort-by-crowding-distance front))
+                            (selected (subseq sorted-by-crowding 0 remaining)))
+                       (setf ranked-next-population (nconc ranked-next-population selected)))
+                     (return)))))
+      (export-piecewise-fit experiment observations actions generation)
+      (write-report ranked-population experiment generation)
+      (setf *last-population* ranked-next-population)
+      (mapcar #'car ranked-next-population))))
 
+;; Thought: See if we can reimplement this as a recursive function
+;; taking a list of objectives
 (defun single-objective-optimization (dataset population experiment generation)
   "Perform one generation of single-objective-optimization using tournament selection.
    Takes DATASET, current POPULATION and EXPERIMENT configuration.
@@ -92,6 +96,7 @@
     (with-population new-population num-threads
       (mutate individual experiment))))
 
+;; I wonder if these two functions would be better merged
 (defun evolutionary-loop (experiment dataset population generation &key evolution-strategy)
   "Run the evolutionary loop recursively for the given EXPERIMENT.
    Takes DATASET, initial POPULATION, current GENERATION, and EVOLUTION-STRATEGY.
@@ -114,7 +119,6 @@
                                (evolutionary-loop experiment dataset initial-population 1 :evolution-strategy #'multi-objective-optimization)
                                (evolutionary-loop experiment dataset initial-population 1 :evolution-strategy #'single-objective-optimization)))
          (evaluation-batch (sample dataset experiment)))
-    (let* ((residual-matrix (calculate-residual-matrix experiment (observations evaluation-batch) (actions evaluation-batch) final-population))
-           (support-matrix (calculate-support-matrix residual-matrix)))
       (with-population final-population (experiment-num-threads experiment)
-        (fitness experiment individual (actions evaluation-batch) nil final-population support-matrix residual-matrix)))))
+        (fitness experiment individual (actions evaluation-batch) nil))))
+

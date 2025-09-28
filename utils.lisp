@@ -31,6 +31,24 @@
           forms
           :initial-value x))
 
+(defmacro ->* (args &rest forms)
+  "Thread multiple ARGS through FORMS as the first arguments.
+   On the first step, ARGS are spliced; thereafter, the accumulated call
+   is passed as a single argument."
+  (let ((acc args)
+        (first t))
+    (dolist (form forms acc)
+      (setf acc
+            (if (consp form)
+                (if first
+                    `(,(car form) ,@acc ,@(cdr form))  ; first step: splice ARGS
+                    `(,(car form) ,acc ,@(cdr form)))  ; later: pass ACC as one expr
+                (if first
+                    `(,form ,@acc)
+                    `(,form ,acc))))
+      (setf first nil))))
+
+
 (defmacro no-result (&body body)
   "Evaluate BODY and return NIL. Useful when the result will
    take very long to return."
@@ -84,18 +102,6 @@
           when (> sum r)
             return choice)))
 
-
-(defun test-weighted-random-choice ()
-  "Run a Monte Carlo test to count how often each choice is selected using
-   WEIGHTED-RANDOM-CHOICE. Prints the count of each outcome after 100,000 trials."
-  (let* ((choices '(bryce cat dog))
-         (weights '(0.25 0.5 0.25))
-         (counts (make-hash-table)))
-    (loop repeat 100000
-          do (incf (gethash (weighted-random-choice choices weights) counts 0)))
-    (loop for choice in choices
-          do (format t "~A: ~D~%" choice (gethash choice counts 0)))))
-
 (defun normal (mean std)
   "Return a single float from a Gaussian distribution with given
    MEAN and STD using the Box-Muller transform."
@@ -115,25 +121,32 @@
               :element-type 'single-float
               :initial-contents (mapcar #'(lambda (x) (coerce x 'single-float)) lst)))
 
-(defun argmax (seq fn)
-  "Return the element in SEQ for which FN returns the highest value."
-  (let ((best (first seq))
-        (best-val (funcall fn (first seq))))
-    (dolist (item (rest seq) best)
-      (let ((val (funcall fn item)))
-        (when (> val best-val)
-          (setf best item
-                best-val val))))))
+(defun argmax (list)
+  "Return the index of the largest element in LIST.
+Returns NIL if LIST is empty. Ties go to the first max."
+  (when list
+    (let ((best-i 0)
+          (best   (first list))
+          (i 0))
+      (dolist (x (rest list) best-i)
+        (incf i)
+        (when (> x best)
+          (setf best x
+                best-i i))))))
 
-(defun argmin (seq fn)
-  "Return the element in SEQ for which FN returns the lowest value."
-  (let ((best (first seq))
-        (best-val (funcall fn (first seq))))
-    (dolist (item (rest seq) best)
-      (let ((val (funcall fn item)))
-        (when (< val best-val)
-          (setf best item
-                best-val val))))))
+(defun argmin (list)
+  "Return the index of the smallest element in LIST.
+Returns NIL if LIST is empty. Ties go to the first max."
+  (when list
+    (let ((best-i 0)
+          (best   (first list))
+          (i 0))
+      (dolist (x (rest list) best-i)
+        (incf i)
+        (when (< x best)
+          (setf best x
+                best-i i))))))
+
 
 (defun column (matrix index)
   "Return the column at INDEX from a MATRIX (a list of lists)."
@@ -147,4 +160,11 @@
     ((< x min) min)
     (t x)))
 
+(defmacro mappend (fn list)
+  "Map FN over LIST and append the resulting lists (non-destructive)."
+  `(apply #'append (mapcar ,fn ,list)))
 
+(defun has-duplicates-p (seq &key (test 'equal))
+  (not
+   (equal (length seq)
+          (length (remove-duplicates seq :test test)))))

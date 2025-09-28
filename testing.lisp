@@ -2,7 +2,6 @@
 (defvar *test-name* nil
   "*TEST-NAME* is updated by `deftest` to track nested test call chains.")
 
-
 (defmacro deftest (name parameters &body body)
   "Define a test function named NAME with PARAMETERS. Within the test,
    CHECK and CHECK-FREQUENCY macros can be used. *TEST-NAME* is updated
@@ -47,3 +46,4 @@
              (,result (<= (abs (- ,proportion ,target)) ,threshold)))
          (format t "~:[FAIL~;pass~]... ~A [~A/~A] (~,2f) ~A~%" ,result *test-name* ,occurrences ,n ,proportion ',body)
          ,result))))
+

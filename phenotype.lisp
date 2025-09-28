@@ -23,17 +23,17 @@
   (destructuring-bind (dest op &rest args) instr
       `(setf ,(parse-symbol dest) (,(lookup-fn op) ,@(mapcar #'parse-symbol args)))))
 
-(defun convert-to-phenotype (genotype experiment &key show-all-registers)
+(defun convert-to-phenotype (genotype &key show-all-registers)
   "Compile a GENOTYPE (list of instructions) into an executable phenotype function.
    The resulting function takes OBSERVATIONS and returns the output register(s).
 
    GENOTYPE: List of instructions of the form (DEST OPCODE ARG1 [ARG2])
    EXPERIMENT: Defines possible registers, observation variables, output registers, etc.
    SHOW-ALL-REGISTERS (optional): If true, returns all registers;
-   otherwise, return the output register(s) defined in EXPERIMENT.
+   otherwise, return the output register(s) defined in *EXPERIMENT*.
 
    Supports both batched and single observation input."
-  (let* ((output-registers (experiment-output-registers experiment))
+  (let* ((output-registers (experiment-output-registers *experiment*))
          (return-expr (if show-all-registers
                         `(coerce registers 'list)
                         `(list ,@(mapcar #'parse-symbol output-registers))))
@@ -46,7 +46,7 @@
                        ,@(mapcar #'translate-instruction genotype)
                        ,return-expr))))
     (lambda (obs)
-      (let* ((num-registers (length (experiment-registers experiment)))
+      (let* ((num-registers (length (experiment-registers *experiment*)))
              (registers (zeros num-registers)))
         (if (and (listp obs) (listp (first obs))) ; batched
             (mapcar (lambda (o)
@@ -69,8 +69,8 @@ RESULT can be a list of registers or a batch of list of registers."
                 (clamp value min max))
               result)))
 
-(defun phenotype (genotype experiment observations &key show-all-registers)
-  "Convenience function to evaluate a GENOTYPE on OBSERVATIONS using EXPERIMENT.
+(defun phenotype (genotype observations &key show-all-registers)
+  "Convenience function to evaluate a GENOTYPE on OBSERVATIONS.
    Internally compiles the genotype into a function using CONVERT-TO-PHENOTYPE and
    immediately calls it.
 
@@ -80,4 +80,4 @@ RESULT can be a list of registers or a batch of list of registers."
 
    SHOW-ALL-REGISTERS (optional): If true, returns all registers;
    otherwise, return the output register(s) defined in EXPERIMENT."
-  (clamp-registers (funcall (convert-to-phenotype genotype experiment :show-all-registers show-all-registers) observations)))
+  (clamp-registers (funcall (convert-to-phenotype genotype :show-all-registers show-all-registers) observations)))

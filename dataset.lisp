@@ -21,11 +21,11 @@
    This is syntactic sugar for `(subseq data start end)"
   (subseq dataset start end))
 
-(defun sample (dataset experiment)
-  "Sample a batch of transitions from DATASET based on the EXPERIMENT's batch size.
+(defun sample (dataset)
+  "Sample a batch of transitions from DATASET based on the *EXPERIMENT*'s batch size.
    If the dataset has fewer elements than the batch size, return the full dataset.
    Otherwise, return a contiguous random batch of size 'experiment-batch-size'."
-  (let ((batch-size (experiment-batch-size experiment)))
+  (let ((batch-size (experiment-batch-size *experiment*)))
     (if (>= batch-size (length dataset))
         dataset
         (progn

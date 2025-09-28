@@ -1,0 +1,75 @@
+(in-package :bes)
+
+(defparameter *team-id-generator* (make-unique-id-generator "T"))
+
+(defun team-p (form)
+  (and
+   (listp form)
+   (equal (car form) 'TEAM)
+   (every #'symbolp (cddr form))))
+
+(defun team-id (team)
+  (unless (team-p team)
+    (error "TEAM-ID expects a TEAM. Got ~A instead.~%" team))
+  (cadr team))
+
+(defun team-learners (team)
+  (unless (team-p team)
+    (error "TEAM-LEARNERS expects a TEAM. Got ~A instead.~%" team))
+  (cddr team))
+
+(defun team-count-unique-atomic-actions (tpg team)
+  (let* ((learner-ids (team-learners team))
+         (learners (mapcar (lambda (lid) (find-learner-by-id tpg lid)) learner-ids))
+         (atomic-learners (remove-if-not #'atomic-p learners))
+         (unique-atomic-actions (remove-duplicates (mapcar #'learner-action atomic-learners) :test #'equal)))
+    (length unique-atomic-actions)))
+
+(defun follow-reference (tpg reference observation &key (visited nil))
+  (cond ((member reference visited) (error "Cycle detected during team execution."))
+        ((team-p reference) (execute-team tpg (team-id reference) observation :visited visited))
+        ((learner-p reference) (let* ((goto-team-id (get-reference (learner-action reference)))
+                                      (goto-team (find-team-by-id tpg goto-team-id)))
+                                 (push goto-team-id visited)
+                                 (follow-reference tpg goto-team observation :visited visited)))))
+
+(defun suggest-action (learner observation)
+  (let ((action (learner-action learner)))
+    (if (program-p action)
+        (execute-program action observation)
+        action)))
+
+(defun execute-team (tpg team-id observation &key (visited nil))
+  (let* ((team (find-team-by-id tpg team-id))
+         (learner-ids (team-learners team))
+         (learners (mapcar (lambda (lid) (find-learner-by-id tpg lid)) learner-ids))
+         (bids (mapcar (lambda (learner) (get-bid learner observation)) learners)))
+    (let ((highest-bidder (elt learners (argmax bids))))
+      (if (atomic-p highest-bidder)
+          (suggest-action highest-bidder observation)
+          (follow-reference tpg highest-bidder observation :visited visited)))))
+
+(defun make-team (&key (attempts 5))
+  (let* ((min (experiment-initial-minimum-number-of-learners *experiment*))
+         (max (experiment-initial-maximum-number-of-learners *experiment*))
+         (learners (loop repeat (random-range min max)
+                         collect (make-learner)))
+         (atomic-learners (remove-if-not #'atomic-p learners))
+         (unique-atomic-actions (remove-duplicates (mapcar #'learner-action atomic-learners) :test #'equal))
+         (team `(TEAM ,(funcall *team-id-generator*)
+                      ,@(mapcar #'learner-id learners))))
+    (cond
+      ((>= (length unique-atomic-actions) 2)
+       (values team learners))
+      ((> attempts 0)
+       (make-team :attempts (1- attempts)))
+      (t
+       (error "Ran out of attempts to make a team. Not enough distinct atomic actions to ensure >= 2 per team.")))))
+
+(defun eval-team (team tpg dataset)
+  (let* ((team-id (team-id team))
+         (observations (observations dataset))
+         (actions (actions dataset))
+         (predictions (mapcar (lambda (obs) (execute-team tpg team-id obs)) observations)))
+    (fitness (cons tpg team) actions predictions)))
+

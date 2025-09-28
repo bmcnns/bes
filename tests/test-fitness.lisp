@@ -1,3 +1,5 @@
+(in-package :bes)
+
 (deftest mean-squared-error-is-correct-result ()
   "Ensure that MEAN-SQUARED-ERROR gives the correct result."
   (and

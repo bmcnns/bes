@@ -4,17 +4,17 @@
 
 (defun tournament-selection (ranked-population tournament-size)
   "Select an individual from RANKED-POPULATION using tournament selection.
-   The tournament size is specified by EXPERIMENT."
+   The tournament size is specified by *EXPERIMENT*."
   (let* ((tournament (loop repeat tournament-size
                            collect (random-choice ranked-population))))
     (argmin tournament #'cadr)))
 
-(defun single-objective-selection (ranked-population experiment)
+(defun single-objective-selection (ranked-population)
   "Return a list of individuals from RANKED-POPULATION selected by tournament selection.
-   The number of selected individuals matches the target population size in EXPERIMENT."
-  (let ((desired-population-size (experiment-population-size experiment)))
+   The number of selected individuals matches the target population size in *EXPERIMENT*."
+  (let ((desired-population-size (experiment-population-size *experiment*)))
     (loop repeat desired-population-size
-          collect (tournament-selection ranked-population (experiment-tournament-size experiment)))))
+          collect (tournament-selection ranked-population (experiment-tournament-size *experiment*)))))
 
 ;;; Multi-objective Optimization
 

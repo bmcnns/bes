@@ -18,10 +18,10 @@
   tournament-size
   ;; performance 
   num-threads
-  ; search
+  ;; search
   population-size
   generations
-  ; initialization
+  ;; initialization
   maximum-program-length
   minimum-program-length
   observation-probability
@@ -32,10 +32,24 @@
   mutate-operation-probability
   mutate-constant-probability
   add-instruction-probability
-  delete-instruction-probability
+  remove-instruction-probability
   swap-instruction-probability
   constant-mutation-std
-  maximum-instruction-count)
+  maximum-instruction-count
+  ;; tpg parameters
+  actions
+  initial-minimum-number-of-learners
+  initial-maximum-number-of-learners
+  minimum-number-of-learners
+  maximum-number-of-learners
+  ;; team mutation probabilities
+  mutate-learner-probability
+  add-learner-probability
+  remove-learner-probability
+  ;; learner mutation probabilities
+  mutate-learner-program-vs-action-probability
+  learner-atomic-action-probability
+  mutate-team-probability)
 
 (defmacro defexperiment (name &rest options)
   "Define a global variable NAME bound to an EXPERIMENT initialized with keyword arguments.

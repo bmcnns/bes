@@ -75,7 +75,7 @@ All data structures and transformations in BES are **immutable** by design.
   :mutate-operation-probability 0.25
   :mutate-constant-probability 0.25
   :add-instruction-probability 1.0
-  :delete-instruction-probability 1.0
+  :remove-instruction-probability 1.0
   :swap-instruction-probability 1.0
   :constant-mutation-std 1.0
   :maximum-instruction-count 256)

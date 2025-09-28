@@ -168,3 +168,10 @@ Returns NIL if LIST is empty. Ties go to the first max."
   (not
    (equal (length seq)
           (length (remove-duplicates seq :test test)))))
+
+(defun make-unique-id-generator (prefix)
+  "Returns a closure that generates a unique ID
+   Note: Not thread-safe."
+  (let ((counter 0))
+    (lambda ()
+      (intern (format nil "~A~D" (string-upcase prefix) (incf counter))))))

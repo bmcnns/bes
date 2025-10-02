@@ -67,8 +67,22 @@
                (setf learners (append new-learners learners))))
     `(TPG (LEARNERS ,@learners) (TEAMS ,@teams))))
 
+(defun build-learner-table (tpg)
+  (let ((learner-table (make-hash-table :test 'equal)))
+    (dolist (learner (learners tpg))
+      (setf (gethash (learner-id learner) learner-table) learner))
+    learner-table))
+
+(defun build-team-table (tpg)
+  (let ((team-table (make-hash-table :test 'equal)))
+    (dolist (team (teams tpg))
+      (setf (gethash (team-id team) team-table) team))
+    team-table))
+
 (defun eval-tpg (tpg dataset)
   (let ((teams (teams tpg))
-        (num-threads (experiment-num-threads *experiment*)))
+        (num-threads (experiment-num-threads *experiment*))
+        (learner-table (build-learner-table tpg))
+        (team-table (build-team-table tpg)))
     (with-population teams num-threads
-      (eval-team individual tpg dataset))))
+      (eval-team individual tpg dataset :learner-table learner-table :team-table team-table))))

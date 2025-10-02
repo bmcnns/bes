@@ -38,9 +38,15 @@
   "A learner is atomic if its action is not a reference to another team."
   (not (reference-p (learner-action learner))))
 
-(defun get-bid (learner observation)
-  (let ((program (learner-program learner)))
-    (elt (execute-program program observation) 0)))
+(defun register-zero (registers)
+  (elt registers 0))
+
+(defun get-bid (learner observations)
+  (if (listp (first observations))
+      ;; batch case
+      (mapcar #'register-zero (execute-program (learner-program learner) observations))
+      ;; single observation
+      (register-zero (execute-program (learner-program learner) observations))))
 
 (defun get-reference (reference)
   (if (reference-p reference)

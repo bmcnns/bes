@@ -13,52 +13,10 @@
          (ids (mapcar #'car tournament))
          (winner-idx (argmin objective-scores))
          (winner (elt ids winner-idx)))
-  (format t "~A~%" winner)))
+    (format t "~A~%" winner)))
 
-(defun single-objective-selection (ranked-population)
-  "Return a list of individuals from RANKED-POPULATION selected by tournament selection.
-   The number of selected individuals matches the target population size in *EXPERIMENT*."
-  (let ((desired-population-size (experiment-population-size *experiment*)))
-    (loop repeat desired-population-size
-          collect (tournament-selection ranked-population (experiment-tournament-size *experiment*)))))
-
-;;; Multi-objective Optimization
-
-(defun dominates-p (ranked-individual-a ranked-individual-b)
-  "Return T if RANKED-INDIVIDUAL-A dominates RANKED-INDIVIDUAL-B.
-   Each individual is of the form (genotype . scores) where scores is a
-   list of objective values. Assumes all objectives are to be minimized."
-  (let* ((better-or-equal t)
-         (strictly-better nil)
-         (individual-a-scores (cdr ranked-individual-a))
-         (individual-b-scores (cdr ranked-individual-b)))
-    (loop for a in individual-a-scores
-          for b in individual-b-scores do
-            (cond
-              ((< a b) (setf strictly-better t))
-              ((> a b) (setf better-or-equal nil))))
-    (and better-or-equal strictly-better)))
-
-(defun pareto-front (population)
-  "Return the Pareto front (non-dominated set) from POPULATION.
-   Each individual is of the form (label . scores)."
-  (remove-if
-   (lambda (p)
-     (some (lambda (q) (dominates-p q p))
-           population))
-   population))
 
 ;; unfortunately the same as below
-(defun non-dominated-sorting (ranked-population)
-  "Perform non-dominated sorting on RANKED-POPULATION.
-   Returns a list of fronts, where each front is a list of non-dominated individuals."
-  (let ((remaining (copy-list ranked-population))
-        (fronts '()))
-    (loop while remaining do
-      (let ((front (pareto-front remaining)))
-        (push front fronts)
-        (setf remaining (set-difference remaining front :test #'equal))))
-    (nreverse fronts)))
 
 ;; you did not write this and therefore you do not understand it
 (defun crowding-distances (front)

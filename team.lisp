@@ -39,10 +39,11 @@
         (execute-program action observation)
         action)))
 
-(defun execute-team (tpg team-id observation &key (visited nil))
-  (let* ((team (find-team-by-id tpg team-id))
+(defun execute-team (tpg team-id observation &key (visited nil) (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
+  (let* (
+         (team (gethash team-id team-table))
          (learner-ids (team-learners team))
-         (learners (mapcar (lambda (lid) (find-learner-by-id tpg lid)) learner-ids))
+         (learners (mapcar (lambda (lid) (gethash lid learner-table)) learner-ids))
          (bids (mapcar (lambda (learner) (get-bid learner observation)) learners)))
     (let ((highest-bidder (elt learners (argmax bids))))
       (if (atomic-p highest-bidder)
@@ -66,10 +67,10 @@
       (t
        (error "Ran out of attempts to make a team. Not enough distinct atomic actions to ensure >= 2 per team.")))))
 
-(defun eval-team (team tpg dataset)
+(defun eval-team (team tpg dataset &key (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
   (let* ((team-id (team-id team))
          (observations (observations dataset))
          (actions (actions dataset))
-         (predictions (mapcar (lambda (obs) (execute-team tpg team-id obs)) observations)))
+         (predictions (mapcar (lambda (obs) (execute-team tpg team-id obs :learner-table learner-table :team-table team-table)) observations)))
     (fitness (cons tpg team) actions predictions)))
 

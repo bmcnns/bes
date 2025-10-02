@@ -12,7 +12,7 @@
                 #:pmap
                 #:end-kernel)
   (:shadow :report)
-  (:export evolve defdataset defexperiment phenotype))
+  (:export evolve defdataset defexperiment))
 
 (in-package :bes)
                 

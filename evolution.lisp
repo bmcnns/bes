@@ -88,7 +88,7 @@
          (actions (actions dataset))
          (ranked-population
            (with-population population num-threads
-             (let ((predictions (phenotype individual observations)))
+             (let ((predictions (execute-program individual observations)))
                (fitness experiment individual actions predictions))))
          (new-population (mapcar #'car (single-objective-selection ranked-population))))
     (write-report ranked-population generation)

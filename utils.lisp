@@ -174,4 +174,54 @@ Returns NIL if LIST is empty. Ties go to the first max."
    Note: Not thread-safe."
   (let ((counter 0))
     (lambda ()
-      (intern (format nil "~A~D" (string-upcase prefix) (incf counter))))))
+      (intern (format nil "~A~D" (string-upcase prefix) (incf counter)) "BES"))))
+
+(defmacro with-population (population threads &body forms)
+  "Execute FORMS on each individual in POPULATION in parallel.
+   THREADS specifies how many threads to use."
+  (let ((pop-var (gensym "POP")))
+    `(let ((,pop-var ,population))
+       (if (> ,threads 1)
+           (progn
+             (unless (find-package 'lparallel)
+               (ql:quickload :lparallel))
+             (setf lparallel:*kernel* (lparallel:make-kernel ,threads))
+             (unwind-protect
+                  (progn
+                    ,@(loop for form in forms
+                            collect
+                            `(setf ,pop-var
+                                   (lparallel:pmap 'list (lambda (individual) ,form) ,pop-var))))
+               (lparallel:end-kernel :wait t)))
+           (progn
+             ,@(loop for form in forms
+                     collect
+                     `(setf ,pop-var
+                            (mapcar (lambda (individual) ,form) ,pop-var)))))
+       ,pop-var)))
+
+
+(defmacro multi-thread (sequence symbol-var num-threads &body forms)
+  "Execute FORMS on each individual in POPULATION in parallel.
+   THREADS specifies how many threads to use."
+  (let ((sequence-var (gensym "SEQ")))
+    `(let ((,sequence-var ,sequence))
+       (if (> ,num-threads 1)
+           (progn
+             (unless (find-package 'lparallel)
+               (ql:quickload :lparallel))
+             (setf lparallel:*kernel* (lparallel:make-kernel ,num-threads))
+             (unwind-protect
+                  (progn
+                    ,@(loop for form in forms
+                            collect
+                            `(setf ,sequence-var
+                                   (lparallel:pmap 'list (lambda (,symbol-var) ,form) ,sequence-var))))
+               (lparallel:end-kernel :wait t)))
+           (progn
+             ,@(loop for form in forms
+                     collect
+                     `(setf ,sequence-var
+                            (mapcar (lambda (,symbol-var) ,form) ,sequence-var)))))
+       ,sequence-var)))
+

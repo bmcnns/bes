@@ -22,6 +22,8 @@
                (:file "tpg")
                (:file "pareto")
                (:file "linear-gp")
+               (:file "strategies")
+               (:file "evolution-dsl")
                (:file "unit-test")
                (:file "tests/test-tpg")
                (:file "tests/test-mutation")

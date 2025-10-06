@@ -9,33 +9,6 @@
 ;;; generational updates. These macros are used to structure and
 ;;; schedule transformations over populations.
 
-
-(defmacro with-population (population threads &body forms)
-  "Execute FORMS on each individual in POPULATION in parallel.
-   THREADS specifies how many threads to use."
-  (let ((pop-var (gensym "POP")))
-    `(let ((,pop-var ,population))
-       (if (> ,threads 1)
-           (progn
-             (unless (find-package 'lparallel)
-               (ql:quickload :lparallel))
-             (setf lparallel:*kernel* (lparallel:make-kernel ,threads))
-             (unwind-protect
-                  (progn
-                    ,@(loop for form in forms
-                            collect
-                            `(setf ,pop-var
-                                   (lparallel:pmap 'list (lambda (individual) ,form) ,pop-var))))
-               (lparallel:end-kernel :wait t)))
-           (progn
-             ,@(loop for form in forms
-                     collect
-                     `(setf ,pop-var
-                            (mapcar (lambda (individual) ,form) ,pop-var)))))
-       ,pop-var)))
-
-
-
 (defmacro defpopulation (name size)
   "Define a global population NAME as a list of SIZE genotypes.
    Each genotype is created using MAKE-PROGRAM.
@@ -110,6 +83,7 @@
 (defun evolve (dataset)
   "Initialize a population and run the evolutionary loop using multi-objective optimization.
    Returns the final evolved population after the specified number of generations in *EXPERIMENT*."
+  (clear-cache)
   (let* ((population-size (experiment-population-size *experiment*))
          (initial-population (loop repeat population-size
                                    collect (random-program)))

@@ -31,15 +31,20 @@
     (error "Expecting a TPG. Got ~A instead.~%" tpg))
   (cdadr tpg))
 
-(defun find-learner-by-id (tpg learner-id)
+(defun find-learner-by-id (tpg learner-id &key (learner-table nil))
   (let ((learners (learners tpg)))
-    (or (find learner-id learners :key #'learner-id)
-        (error "Learner not found."))))
+    (if learner-table
+        (gethash learner-id learner-table)
+        (or
+         (find learner-id learners :key #'learner-id)
+         (error "Learner not found.")))))
 
-(defun find-team-by-id (tpg team-id)
+(defun find-team-by-id (tpg team-id &key (team-table nil))
   (let ((teams (teams tpg)))
-    (or (find team-id teams :key #'team-id)
-        (error "Team not found."))))
+    (if team-table
+        (gethash team-id team-table)
+        (or (find team-id teams :key #'team-id)
+            (error "Team not found.")))))
 
 (defun remove-dangling-learners (tpg)
   (let* ((teams (teams tpg))
@@ -48,11 +53,16 @@
     `(TPG (LEARNERS ,@(remove-if-not (lambda (l) (member (learner-id l) active-learner-ids)) learners))
           (TEAMS ,@teams))))
 
-(defun team-neighbours (tpg team)
+(defun team-neighbours (tpg team &key (learner-table (build-learner-table tpg)))
   "List of target team-ids this TEAM references via its learners' actions."
-  (let* ((learners (mapcar (lambda (learner-id) (find-learner-by-id tpg learner-id))
+  (unless team
+    "NIL team provided. ~A~%" team)
+  (let* ((learners (mapcar (lambda (learner-id) (or (gethash learner-id learner-table)
+                                                    (error "Learner not found ~A on ~A team~%" learner-id team)))
                            (team-learners team)))
-         (non-atomic-learners (remove-if-not (lambda (learner) (reference-p (learner-action learner))) learners))
+         (non-atomic-learners (remove-if-not (lambda (learner)
+                                               (reference-p (learner-action learner)))
+                                              learners))
          (references (mapcar #'learner-action non-atomic-learners))
          (gotos (mapcar #'get-reference references)))
     gotos))
@@ -80,9 +90,43 @@
     team-table))
 
 (defun eval-tpg (tpg dataset)
-  (let ((teams (teams tpg))
-        (num-threads (experiment-num-threads *experiment*))
-        (learner-table (build-learner-table tpg))
-        (team-table (build-team-table tpg)))
-    (with-population teams num-threads
-      (eval-team individual tpg dataset :learner-table learner-table :team-table team-table))))
+  (let* ((num-threads (experiment-num-threads *experiment*))
+         (learner-table (build-learner-table tpg))
+         (team-table (build-team-table tpg))
+         (root-teams (root-teams tpg :team-table team-table)))
+    (multi-thread root-teams team num-threads
+      (eval-team team tpg dataset :learner-table learner-table :team-table team-table))))
+
+(defun root-team-ids (tpg)
+  (let* ((team-ids (mapcar #'team-id (teams tpg)))
+         (learners (learners tpg))
+         (non-atomic-learners (remove-if #'atomic-p learners))
+         (non-atomic-actions (mapcar #'learner-action non-atomic-learners))
+         (references (mapcar #'get-reference non-atomic-actions)))
+    (set-difference team-ids references)))
+  
+(defun root-teams (tpg &key (team-table (build-team-table tpg)))
+  (let ((root-team-ids (root-team-ids tpg))
+        (root-teams '()))
+    (dolist (id root-team-ids)
+      (when (or (gethash id team-table)
+                (error "Team ID not found while searching root teams. ~A in ~A~%" id tpg))
+        (push (gethash id team-table) root-teams)))
+    root-teams))
+  
+(defun internal-team-ids (tpg)
+  (let* ((team-ids (mapcar #'team-id (teams tpg)))
+         (learners (learners tpg))
+         (non-atomic-learners (remove-if #'atomic-p learners))
+         (non-atomic-actions (mapcar #'learner-action non-atomic-learners))
+         (references (mapcar #'get-reference non-atomic-actions)))
+    references))
+
+(defun internal-teams (tpg &key (team-table (build-team-table tpg)))
+  (let ((internal-team-ids (internal-team-ids tpg))
+        (internal-teams '()))
+    (dolist (id internal-team-ids)
+      (when (or (gethash id team-table)
+                (error "Team ID not found while searching internal teams. ~A in ~A~%" id tpg))
+        (push (gethash id team-table) internal-teams)))
+    internal-teams))

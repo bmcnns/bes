@@ -3,10 +3,11 @@
 (defun build-adjacency (tpg)
   "Return hash: team-id -> list target-team-id ... )."
   (let ((adj (make-hash-table :test 'equal))
-        (teams (teams tpg)))
+        (teams (teams tpg))
+        (learner-table (build-learner-table tpg)))
     (dolist (team teams)
       (let ((team-id (team-id team))
-            (neighbours (team-neighbours tpg team)))
+            (neighbours (team-neighbours tpg team :learner-table learner-table)))
         (setf (gethash team-id adj) neighbours)))
     adj))
 

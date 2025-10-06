@@ -6,6 +6,12 @@
     (error "Expecting a Linear GP. Got ~A instead.~%" lgp))
   (cdr lgp))
 
+(defun build-program-table (lgp)
+  (let ((program-table (make-hash-table :test 'equal)))
+    (dolist (program (programs lgp))
+      (setf (gethash (program-id program) program-table) program))
+    program-table))
+  
 (defun make-linear-gp ()
   (let* ((population-size (experiment-population-size *experiment*))
          (programs (loop repeat population-size

@@ -13,7 +13,7 @@
          (ids (mapcar #'car tournament))
          (winner-idx (argmin objective-scores))
          (winner (elt ids winner-idx)))
-    (format t "~A~%" winner)))
+    winner))
 
 
 ;; unfortunately the same as below

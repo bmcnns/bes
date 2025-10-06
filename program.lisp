@@ -151,6 +151,8 @@ RESULT can be a list of registers or a batch of list of registers."
   (bt:with-lock-held (*program-cache-lock*)
     (setf (gethash program-id *program-cache*) compiled-program)))
     
+(defun clear-cache ()
+  (setf *program-cache* (make-hash-table :test 'equal)))
 
 (defun execute-program (program observations &key show-all-registers)
   "Convenience function to evaluate a GENOTYPE on OBSERVATIONS.
@@ -172,5 +174,8 @@ RESULT can be a list of registers or a batch of list of registers."
 
 (defun eval-program (program dataset)
   (let* ((predictions (execute-program program (observations dataset))))
-    (fitness program (actions dataset) predictions)))
+    (fitness program (actions dataset) predictions nil)))
 
+(defun find-program-by-id (lgp id &key (program-table (build-program-table lgp)))
+  (or (gethash id program-table)
+      (error "Program ~A not found in ~A~%" id lgp)))

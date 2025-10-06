@@ -236,11 +236,11 @@
         (action (learner-action learner)))
     `(LEARNER ,new-learner-id ,(mutate-program program) ,action)))
 
-(defun mutate-learner (tpg team &key (attempts 3) (return-original-learner-id nil))
+(defun mutate-learner (tpg team &key (attempts 3) (return-original-learner-id nil) (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
   (let* ((new-team-id (funcall *team-id-generator*))
          (learner-ids (team-learners team))
          (learner-id (random-choice learner-ids))
-         (learner (find-learner-by-id tpg learner-id))
+         (learner (gethash learner-id learner-table))
          (mutate-learner-program-vs-action-probability
            (experiment-mutate-learner-program-vs-action-probability *experiment*))
          (mutated-learner
@@ -251,91 +251,122 @@
          (mutated-team `(TEAM ,new-team-id ,@(append (remove learner-id learner-ids) (list mutated-learner-id))))
          (mutated-tpg `(TPG (LEARNERS ,@(append (list mutated-learner) (learners tpg))) (TEAMS ,@(append (list mutated-team) (teams tpg))))))
     (if (> attempts 0)
-        (if (>= (team-count-unique-atomic-actions mutated-tpg mutated-team) 2)
+        (if (>= (team-count-unique-atomic-actions mutated-tpg mutated-team :learner-table (build-learner-table mutated-tpg)) 2)
             (if return-original-learner-id
                 (values mutated-team mutated-learner learner-id)
                 (values mutated-team mutated-learner))
             (mutate-learner tpg team :attempts (1- attempts) :return-original-learner-id return-original-learner-id))
         (values team nil))))
 
-(defun add-learner (tpg team)
+(defun add-learner (tpg team
+                  &key (learner-table (build-learner-table tpg))
+                       (team-table (build-team-table tpg)))
   (let* ((new-team-id (funcall *team-id-generator*))
-        (all-learners (learners tpg))
-        (all-learners-that-wont-introduce-cycle
-          (remove-if (lambda (learner) (if (reference-p (learner-action learner))
-                                           (would-create-cycle-p tpg (team-id team) (get-reference (learner-action learner)))
-                                           nil)) all-learners))
-        (maximum-learner-count (experiment-maximum-number-of-learners *experiment*)))
+         (all-learners (learners tpg))
+         (maximum-learner-count (experiment-maximum-number-of-learners *experiment*)))
     (if (< (1- (length all-learners)) maximum-learner-count)
-        (let* ((all-learner-ids (mapcar #'learner-id all-learners-that-wont-introduce-cycle))
-               (learners (team-learners team))
-               (available-learner-ids (set-difference all-learner-ids (team-learners team))))
-          (if available-learner-ids
-              (let ((new-learner (random-choice available-learner-ids)))
-                `(TEAM ,new-team-id ,@(append learners (list new-learner))))
-              team))
+        (let* ((all-learner-ids (mapcar #'learner-id all-learners))
+               (current-ids (team-learners team))
+               (candidates (set-difference all-learner-ids current-ids)))
+          (labels ((pick-valid (remaining)
+                     (when remaining
+                       (let ((candidate (random-choice remaining)))
+                         (if (and (reference-p (learner-action (gethash candidate learner-table)))
+                                  (would-create-cycle-p tpg (team-id team)
+                                                        (get-reference (learner-action (gethash candidate learner-table)))))
+                             ;; cycle → try again
+                             (pick-valid (remove candidate remaining))
+                             candidate)))))
+            (let ((new-learner (pick-valid candidates)))
+              (if new-learner
+                  `(TEAM ,new-team-id ,@(append current-ids (list new-learner)))
+                  team))))
         team)))
 
-(defun remove-learner (tpg team)
-  ;; does not remove learner if it would leave the team
-  ;; without at least two unique atomic learners
-  (let* ((learners (team-learners team))
-         (original-team-id (team-id team))
-         (permutations
-           (loop for learner in learners
-                 collect `(TEAM ,original-team-id ,@(remove learner learners))))
-         (candidates (remove-if-not (lambda (permutation) (>= (team-count-unique-atomic-actions tpg permutation) 2))
-                                    permutations)))
-    (if candidates
-        (let ((new-team-id (funcall *team-id-generator*)))
-          `(TEAM ,new-team-id ,@(team-learners (random-choice candidates))))
-        team)))
+(defun remove-learner (tpg team &key (learner-table (build-learner-table tpg)))
+  ;; Removes a random learner if doing so still leaves at least 2 unique atomic actions
+  (let* ((original-team-id (team-id team))
+         (learners (team-learners team)))
+    (labels ((try-remove (remaining)
+               (when remaining
+                 (let* ((candidate (random-choice remaining))
+                        (new-learners (remove candidate learners)))
+                   (if (>= (team-count-unique-atomic-actions
+                            tpg `(TEAM ,original-team-id ,@new-learners) :learner-table learner-table) 2)
+                       ;; success
+                       `(TEAM ,(funcall *team-id-generator*) ,@new-learners)
+                       ;; failure, try another
+                       (try-remove (remove candidate remaining)))))))
+      (or (try-remove learners)
+          team))))
 
-(Defun maybe-add-learner (tpg team)
+
+(Defun maybe-add-learner (tpg team &key (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
   (let ((add-learner-probability (experiment-add-learner-probability *experiment*)))
     (if (bernoulli add-learner-probability)
-        (add-learner tpg team)
+        (add-learner tpg team :learner-table learner-table :team-table team-table)
         team)))
 
-(defun maybe-remove-learner (tpg team)
+(defun maybe-remove-learner (tpg team &key (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
   (let ((remove-learner-probability (experiment-remove-learner-probability *experiment*)))
     (if (bernoulli remove-learner-probability)
-        (remove-learner tpg team)
+        (remove-learner tpg team :learner-table learner-table)
         team)))
 
-(defun maybe-mutate-learner (tpg team)
+(defun maybe-mutate-learner (tpg team &key (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
   (let ((mutate-learner-probability (experiment-mutate-learner-probability *experiment*)))
     (if (bernoulli mutate-learner-probability)
-        (mutate-learner tpg team)
+        (mutate-learner tpg team :learner-table learner-table :team-table team-table)
         (values team nil))))
 
-(defun mutate-team (tpg team)
-  (maybe-mutate-learner tpg (maybe-remove-learner tpg (maybe-add-learner tpg team))))
+(defun mutate-team (tpg team &key (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
+  (maybe-mutate-learner tpg (maybe-remove-learner tpg (maybe-add-learner tpg team :learner-table learner-table :team-table team-table) :learner-table learner-table :team-table team-table) :learner-table learner-table :team-table team-table))
 
-(defun maybe-mutate-team (tpg team)
+(defun maybe-mutate-team (tpg team &key (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
   ;; ask malcolm if teams are always mutated -- or whether some teams are unmutated.
   ;; or check stephen's code base first.
   (let ((mutate-team-probability (experiment-mutate-team-probability *experiment*)))
     (if (bernoulli mutate-team-probability)
-        (mutate-team tpg team)
+        (mutate-team tpg team :learner-table learner-table :team-table team-table) 
         (values team nil))))
 
-(defun mutate-tpg (tpg)
-  (let* ((learners (learners tpg))
-         (teams    (teams tpg))
-         (teams-to-add '())
-         (learners-to-add '()))
-    (dolist (team teams)
-      (multiple-value-bind (modified-team maybe-new-learner)
-          (maybe-mutate-team tpg team)
-        (when maybe-new-learner
-          (push maybe-new-learner learners-to-add))
-        (unless (member modified-team teams :test #'equal)
-          (push modified-team teams-to-add))))
-    `(TPG
-      (LEARNERS ,@(append learners (nreverse learners-to-add)))
-      (TEAMS    ,@(append teams    (nreverse teams-to-add))))))
+(defun mutate-linear-gp (lgp &optional (ids (mapcar #'program-id (programs lgp))))
+  (let ((program-table (build-program-table lgp))
+        (new-programs '()))
+    (multi-thread ids id (experiment-num-threads *experiment*)
+      (let* ((program (or (gethash id program-table)
+                          (error "Cannot mutate. Program ID ~A not found in ~A.~%" id lgp)))
+             (new-program (mutate-program program)))
+        (unless (gethash (program-id new-program) program-table)
+          (push new-program new-programs))))
+    `(LINEAR-GP (PROGRAMS ,@(append (programs lgp) (nreverse new-programs))))))
 
-(defun mutate-linear-gp (lgp)
-  (let ((programs (mapcar #'mutate-program (programs lgp))))
-    `(LINEAR-GP ,@programs)))
+(defun mutate-tpg (tpg &optional (ids (mapcar #'team-id (teams tpg))))
+  (let ((team-table (build-team-table tpg))
+               (learner-table (build-learner-table tpg))
+               (new-learners '())
+               (new-teams '()))
+           (multi-thread ids id (experiment-num-threads *experiment*)
+             (let ((team (or (gethash id team-table)
+                             (error "Cannot mutate. Team ID ~A not found in ~A.~%" id tpg))))
+               (multiple-value-bind (new-team new-learner)
+                   (mutate-team tpg team :learner-table learner-table :team-table team-table)
+                 (unless (gethash (team-id new-team) team-table)
+                     (push new-team new-teams))
+                 (when (and new-learner
+                              (not (gethash (learner-id new-learner) learner-table)))
+                     (push new-learner new-learners)))))
+           (remove-dangling-learners `(TPG (LEARNERS ,@(append (learners tpg) (nreverse new-learners)))
+                 (TEAMS ,@(append (teams tpg) (nreverse new-teams)))))))
+
+(defun mutate (model &optional ids)
+  "Given a list of individual IDs mutate them."
+  (cond ((tpg-p model)
+         (if ids
+             (mutate-tpg model ids)
+             (mutate-tpg model)))
+        ((linear-gp-p model)
+         (if ids
+             (mutate-linear-gp model ids)
+             (mutate-linear-gp model)))))
+

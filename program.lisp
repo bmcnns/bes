@@ -174,8 +174,11 @@ RESULT can be a list of registers or a batch of list of registers."
 
 (defun eval-program (program dataset)
   (let* ((predictions (execute-program program (observations dataset))))
-    (fitness program (actions dataset) predictions nil)))
+    (fitness program (actions dataset) predictions nil nil)))
 
 (defun find-program-by-id (lgp id &key (program-table (build-program-table lgp)))
   (or (gethash id program-table)
       (error "Program ~A not found in ~A~%" id lgp)))
+
+(defun program-complexity (program)
+  (length (program-instructions program)))

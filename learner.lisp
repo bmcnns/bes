@@ -57,3 +57,20 @@
   (let ((actions (experiment-actions *experiment*)))
     `(LEARNER ,(funcall *learner-id-generator*) ,(make-program) ,(random-choice actions))))
 
+(defun learner-complexity (tpg learner-id &key
+                                            (learner-table (build-learner-table tpg))
+                                            (team-table (build-team-table tpg)))
+  "A LEARNER'S complexity is the complexity of its context program PLUS one-of:
+    0 if the LEARNER's action is discrete.
+    PROGRAM-COMPLEXITY if the LEARNER's action is an action program
+    TEAM-COMPLEXITY if the LEARNER's action is a reference to another team."
+  (let* ((learner (find-learner-by-id tpg learner-id :learner-table learner-table))
+         (context-program (learner-program learner))
+         (action (learner-action learner)))
+    (+ (program-complexity context-program)
+       (cond ((program-p action)
+              (program-complexity action))
+             ((reference-p action)
+              (team-complexity tpg (get-reference action)
+                               :learner-table learner-table :team-table team-table))
+             (t 0)))))

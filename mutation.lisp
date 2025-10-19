@@ -236,6 +236,8 @@
         (action (learner-action learner)))
     `(LEARNER ,new-learner-id ,(mutate-program program) ,action)))
 
+;; note - investigate atomic action behaviour
+
 (defun mutate-learner (tpg team &key (attempts 3) (return-original-learner-id nil) (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
   (let* ((new-team-id (funcall *team-id-generator*))
          (learner-ids (team-learners team))
@@ -251,7 +253,8 @@
          (mutated-team `(TEAM ,new-team-id ,@(append (remove learner-id learner-ids) (list mutated-learner-id))))
          (mutated-tpg `(TPG (LEARNERS ,@(append (list mutated-learner) (learners tpg))) (TEAMS ,@(append (list mutated-team) (teams tpg))))))
     (if (> attempts 0)
-        (if (>= (team-count-unique-atomic-actions mutated-tpg mutated-team :learner-table (build-learner-table mutated-tpg)) 2)
+        ;; this got changed from 2 to 1. -- might be worth investigating why we had to do this
+        (if (>= (team-count-unique-atomic-actions mutated-tpg mutated-team :learner-table (build-learner-table mutated-tpg)) 1)
             (if return-original-learner-id
                 (values mutated-team mutated-learner learner-id)
                 (values mutated-team mutated-learner))

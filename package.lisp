@@ -12,7 +12,7 @@
                 #:pmap
                 #:end-kernel)
   (:shadow :report)
-  (:export evolve defdataset defexperiment))
+  (:export evolve defdataset defexperiment execute-team))
 
 (in-package :bes)
                 

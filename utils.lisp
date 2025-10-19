@@ -225,3 +225,26 @@ Returns NIL if LIST is empty. Ties go to the first max."
                             (mapcar (lambda (,symbol-var) ,form) ,sequence-var)))))
        ,sequence-var)))
 
+(defun save-model (file-name model)
+  (with-open-file (stream file-name
+                          :direction :output
+                          :if-exists :supersede
+                          :if-does-not-exist :create)
+    (format stream "~A" model)))
+
+(defun load-model (file-name)
+  (with-open-file (stream file-name
+                          :direction :input)
+    (read stream)))
+
+(defun save-tpg (file-name tpg)
+  (save-model file-name tpg))
+
+(defun load-tpg (file-name)
+  (load-model file-name))
+
+(defun save-lgp (file-name lgp)
+  (save-model file-name lgp))
+
+(defun load-lgp (file-name)
+  (load-model file-name))

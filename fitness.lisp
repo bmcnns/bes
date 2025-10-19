@@ -2,6 +2,16 @@
 
                                         ; Fitness Metrics
 
+(defun accuracy (y-truth y-predicted)
+  "Compute NEGATIVE accuracy between Y-PREDICTED and Y-TRUTH.
+   Suitable for minimization-based optimization.
+   Handles both flat and batched symbolic inputs (e.g. 'LEFT, 'RIGHT, etc.)
+   Returns a value in [-1, 0], where 0 = perfect accuracy."
+  (let* ((correct (count t (mapcar (lambda (y1 y2) (eq y1 y2))
+                                   y-predicted y-truth)))
+         (total (length y-predicted)))
+    (- (/ correct total))))
+
 (defun mean-squared-error (y-truth y-predicted)
   "Compute the Mean Squared Error (MSE) between Y-PREDICTED and Y-TRUTH.
    Handles both flat and batched inputs
@@ -16,28 +26,29 @@
       ;; Batched case
       (/ (reduce #'+ (mapcar #'mean-squared-error y-predicted y-truth)) (length y-predicted))))
 
-;; TODO: Add correct complexity measure for teams.
-(defun complexity (genotype tpg learner-table)
+(defun complexity (genotype tpg learner-table team-table)
   "Return the complexity of GENOTYPE, defined here as its length."
   (if (program-p genotype)
-      (return-from complexity (length (program-instructions genotype))))
+      (return-from complexity (program-complexity genotype)))
   (if (and tpg (team-p genotype))
-      (let* ((learner-ids (team-learners genotype))
-             (learners (mapcar (lambda (lid) (gethash lid learner-table)) learner-ids))
-             (learner-lengths (apply #'+ (mapcar #'length (mapcar #'learner-program learners)))))
-        learner-lengths)))
+      (return-from complexity (team-complexity tpg (team-id genotype)
+                                               :learner-table learner-table
+                                               :team-table team-table))))
 
 (defparameter *objectives*
-  `((:complexity . ,#'(lambda (genotype tpg truth prediction learner-table)
+  `((:complexity . ,#'(lambda (genotype tpg truth prediction learner-table team-table)
                         (declare (ignore truth prediction))
-                        `(COMPLEXITY . ,(complexity genotype tpg learner-table))))
-    (:mean-squared-error . ,#'(lambda (genotype tpg truth prediction learner-table)
-                                (declare (ignore genotype tpg learner-table))
-                                `(LOSS . ,(mean-squared-error truth prediction)))))
+                        `(COMPLEXITY . ,(complexity genotype tpg learner-table team-table))))
+    (:mean-squared-error . ,#'(lambda (genotype tpg truth prediction learner-table team-table)
+                                (declare (ignore genotype tpg learner-table team-table))
+                                `(LOSS . ,(mean-squared-error truth prediction))))
+    (:accuracy . ,#'(lambda (genotype tpg truth prediction learner-table team-table)
+                                (declare (ignore genotype tpg learner-table team-table))
+                                `(ACCURACY . ,(accuracy truth prediction)))))
   "The available objectives to optimize in a fitness function.
    This maps between a defined *EXPERIMENT* and the dynamic fitness
    function being generated to lazy evaluate objectives")
-qq
+
                                         ; Fitness Calculation
 
 ;; this seems like a key candidate for data-driven programming
@@ -47,7 +58,7 @@ qq
    The resulting function accepts (genotype truth prediction) and returns a cons:
    (genotype . list-of-objective-values)
    NOTE: This is lazy evaluation so only the objectives provided will be computed."
-  (lambda (genotype truth prediction learner-table)
+  (lambda (genotype truth prediction learner-table team-table)
     (let* ((is-tpg (and (listp genotype) (tpg-p (car genotype)) (team-p (cdr genotype))))
            (id (cond ((program-p genotype) (program-id genotype))
                      (is-tpg (team-id (cdr genotype)))
@@ -59,12 +70,12 @@ qq
                        (unless fn
                          (error "Unknown objective: ~A" objective))
                        (if is-tpg
-                           (funcall fn (cdr genotype) (car genotype) truth prediction learner-table)
-                           (funcall fn genotype nil truth prediction nil))))
+                           (funcall fn (cdr genotype) (car genotype) truth prediction learner-table team-table)
+                           (funcall fn genotype nil truth prediction nil nil))))
                    objectives))))))
 
-(defun fitness (genotype truth prediction learner-table)
+(defun fitness (genotype truth prediction learner-table team-table)
   "Evaluate the FITNESS of a GENOTYPE using the objectives defined in *EXPERIMENT*.
    Returns (genotype . (obj1 [obj2]...)"
   (let ((objectives (experiment-objectives *experiment*)))
-    (funcall (make-fitness-function objectives) genotype truth prediction learner-table)))
+    (funcall (make-fitness-function objectives) genotype truth prediction learner-table team-table)))

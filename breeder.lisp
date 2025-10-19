@@ -1,0 +1,47 @@
+(in-package :bes)
+
+(defun select-top-R (fitness-scores &key (R 0.2) (key #'first-objective) (pred #'<))
+  "Given a set of SCORES of (INDIVIDUAL-ID ((OBJ1 .. OBJ1-SCORE)..(OBJN .. OBJN-SCORE)))
+   Return the top R PERCENTAGE of INDIVIDUALs using SCORES sorted by KEY.
+   By default, the KEY is OBJ1-SCORE and the LOWEST VALUES are selected."
+  (let ((n (floor (* R (length fitness-scores)))))
+    (when (and (> R 0) (equal n 0))
+      (incf n))
+    (mapcar #'car (subseq (sort fitness-scores pred :key key) 0 n))))
+
+(defun fill-N-offspring (model parents N)
+  (cond ((tpg-p model)
+         (let ((new-learners '())
+               (new-teams '()))
+           (loop while (< (length new-teams) N)
+                 do (let ((parent (random-choice parents)))
+                      (multiple-value-bind (new-team new-learner) (mutate-team model parent)
+                        (when new-learner
+                          (push new-learner new-learners))
+                        (unless (equal (team-id new-team) (team-id parent))
+                          (push new-team new-teams)))))
+           `(TPG (LEARNERS ,@(append (learners model) (nreverse new-learners)))
+                 (TEAMS ,@(append (teams model) (nreverse new-teams))))))
+        
+        ((linear-gp-p model)
+         (let ((new-programs '()))
+           (loop while (< (length new-programs) N)
+                 do (let ((parent (random-choice parents)))
+                      (push (mutate-program parent) new-programs)))
+           `(LINEAR-GP ,@(append (programs model) (nreverse new-programs)))))))
+
+(defun breeder (model dataset log-fn)
+  (let* ((population-size (experiment-population-size *experiment*))
+         (scores (execute model dataset))
+         (model-after-selection (select #'select-top-R model scores))
+         (parents (cond ((tpg-p model)
+                         (intersection (root-teams model) (root-teams model-after-selection) :test #'equal))
+                        ((linear-gp-p model)
+                         (programs model-after-selection))))
+         (gap (cond ((tpg-p model)
+                     (- population-size (length (teams model-after-selection))))
+                    ((linear-gp-p model)
+                     (- population-size (length (programs model-after-selection)))))))
+    (funcall log-fn scores)
+    (fill-N-offspring model-after-selection parents gap)))
+

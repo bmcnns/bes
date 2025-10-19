@@ -1,85 +1,55 @@
 (in-package :bes)
 
-(defun write-log-header ()
-  "Print a header row to *standard-output* showing column names for objectives
-   (min/avg/max). Used at the start of logging for human-readable console output."
-  (let ((objectives (experiment-objectives *experiment*)))
-    (format t "~&~A~15T" "Generation")
-    (loop for objective in objectives
-          for col = (format nil "~A (min/avg/max)" objective)
-          do (format t "~A~45T" col))
-    (terpri)
-    (format t "~A~15T" "-----------")
-    (loop for _ in objectives
-          do (format t "--------------------------~45T"))
-    (terpri)))
 
-(defun write-log (ranked-population generation)
-  "Print a log entry to *standard-output* showing summary statistics (min, avg, max)
-   for each objective in RANKED-POPULATION at the given GENERATION."
-  (let ((objectives (experiment-objectives *experiment*))
-        (metrics (apply #'mapcar #'list (mapcar #'cdr ranked-population))))
-    (format t "~&~D~15T" generation)
-    (loop for objective in objectives
-          for fitness in metrics
-          for avg = (/ (reduce #'+ fitness) (length fitness))
-          for min = (reduce #'min fitness)
-          for max = (reduce #'max fitness)
-          do (format t "~,7f / ~,7f / ~,7f~45T" min avg max))
-    (terpri)))
+(defun make-score-logger (file-name)
+  "Return a closure that logs SCORES to FILE-NAME."
+  (let ((output (open file-name
+                      :direction :output
+                      :if-exists :append
+                      :if-does-not-exist :create))
+        (header-written nil))
+    (lambda (generation scores)
+      ;; If the file is empty, write the header.
+      (unless header-written
+        (let ((objectives (mapcar #'car (cadar scores))))
+          (format output "# generation id ~{~A~^ ~}~%" objectives))
+        (setf header-written t))
+      (dolist (score scores)
+        (destructuring-bind (id . a-list) score
+          (format output "~A ~A" generation id)
+          (dolist (pair (car a-list))
+            (format output " ~,6F" (cdr pair)))
+          (terpri output)))
+      (finish-output output))))
+   
+(defun make-aggregate-score-logger (file-name)
+  "Append one line per GENERATION: for each objective => min mean max."
+  (let ((output (open file-name
+                      :direction :output
+                      :if-exists :append
+                      :if-does-not-exist :create))
+        (header-written nil))
+    (lambda (generation scores)
+      ;; header from the alist of the first score
+      (unless header-written
+        (let* ((objectives (mapcar #'car (cadar scores)))
+               (header (loop for obj in objectives append
+                             (list (format nil "~A_min" obj)
+                                   (format nil "~A_mean" obj)
+                                   (format nil "~A_max" obj)))))
+          (format output "# generation ~{~A~^ ~}~%" header)
+          (setf header-written t)))
 
-
-
-(defun write-results-file-header ()
-  (let ((objectives (experiment-objectives *experiment*)))
-    (with-open-file (stream "results.csv"
-                            :direction :output
-                            :if-exists :supersede
-                            :if-does-not-exist :create)
-      (format stream "generation")
-      (dolist (objective objectives)
-        (format stream ",MIN_~A" objective)
-        (format stream ",AVG_~A" objective)
-        (format stream ",MAX_~A" objective))
-      (terpri stream))))
-
-(defun write-to-results-file (ranked-population generation)
-  (let* ((objectives (experiment-objectives *experiment*))
-         (metrics (apply #'mapcar #'list (mapcar #'cdr ranked-population))))
-    (with-open-file (stream "results.csv"
-                            :direction :output
-                            :if-exists :append
-                            :if-does-not-exist :create)
-      (format stream "~A" generation)
-      (loop for values in metrics
-            do (let ((min (reduce #'min values))
-                     (avg (/ (reduce #'+ values) (length values)))
-                     (max (reduce #'max values)))
-                 (format stream ",~F,~F,~F" min avg max)))
-      (terpri stream))))
-
-(defun write-multi-objective-results-file (ranked-population generation)
-  "Print a log entry to *standard-output* showing the metrics for each objective
-   per individual in RANKED-POPULATION at the given GENERATION."
-  (with-open-file (stream "results.csv"
-                          :direction :output
-                          :if-exists :append
-                          :if-does-not-exist :create)
-    (loop for individual in ranked-population
-          for i from 0
-              do (format stream "~A," generation)
-                 (format stream "~A" i)
-                 (loop for value in (cdr individual)
-                   do (format stream ",~A" value))
-             (terpri stream))))
-
-(defun write-report (ranked-population generation)
-  (if (= generation 1)
-      (progn
-        (write-log-header)
-        (if (< (length (experiment-objectives *experiment*)) 2)
-            (write-results-file-header))))
-  (if (> (length (experiment-objectives *experiment*)) 1)
-      (write-multi-objective-results-file ranked-population generation)
-      (write-to-results-file ranked-population generation))
-  (write-log ranked-population generation))
+      (let ((objectives (mapcar #'car (cadar scores))))
+        (format output "~A" generation)
+        (dolist (obj objectives)
+          (let* ((vals (mapcar (lambda (s)
+                                 ;; s = (id . (ALIST)), so the ALIST is (cadar s)
+                                 (cdr (assoc obj (cadar (list s))))) ; safe, same as (cdr (assoc obj (car (cdr s))))
+                               scores))
+                 (mn  (reduce #'min vals))
+                 (mx  (reduce #'max vals))
+                 (avg (/ (reduce #'+ vals) (length vals))))
+            (format output " ~,6F ~,6F ~,6F" mn avg mx))))
+      (terpri output)
+      (finish-output output))))

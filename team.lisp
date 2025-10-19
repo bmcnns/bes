@@ -75,5 +75,25 @@
          (observations (observations dataset))
          (actions (actions dataset))
          (predictions (mapcar (lambda (obs) (execute-team tpg team-id obs :learner-table learner-table :team-table team-table)) observations)))
-    (fitness (cons tpg team) actions predictions learner-table)))
+    (fitness (cons tpg team) actions predictions learner-table team-table)))
 
+(defun team-complexity (tpg team-id &key (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
+  "A TEAM's complexity is the sum of the complexity of all its learners"
+  (let* ((team (find-team-by-id tpg team-id :team-table team-table))
+         (learners (team-learners team)))
+    (apply '+ (mapcar (lambda (learner-id)
+                        (learner-complexity tpg learner-id
+                                            :learner-table learner-table
+                                            :team-table team-table))
+                      learners))))
+ 
+(defun team-references (tpg team-id &key
+                                      (team-table (build-team-table tpg))
+                                      (learner-table (build-learner-table tpg)))
+  "Returns the TEAMS that this TEAM'S learners point to."
+  (let ((team (find-team-by-id tpg team-id :team-table team-table)))
+    (loop for learner-id in (team-learners team)
+          for learner = (find-learner-by-id tpg learner-id :learner-table learner-table)
+          unless (atomic-p learner)
+            collect (get-reference (learner-action learner)))))
+        

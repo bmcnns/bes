@@ -37,7 +37,7 @@
                              (list (format nil "~A_min" obj)
                                    (format nil "~A_mean" obj)
                                    (format nil "~A_max" obj)))))
-          (format output "# generation ~{~A~^ ~}~%" header)
+          (format output "generation ~{~A~^ ~}~%" header)
           (setf header-written t)))
 
       (let ((objectives (mapcar #'car (cadar scores))))

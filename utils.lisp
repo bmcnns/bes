@@ -248,3 +248,7 @@ Returns NIL if LIST is empty. Ties go to the first max."
 
 (defun load-lgp (file-name)
   (load-model file-name))
+
+(defun mean (seq)
+  (/ (apply #'+ seq) (length seq)))
+  

@@ -15,7 +15,7 @@
   :constant-range '(-10.0 10.0)
   :objectives (accuracy)
   :tournament-size 4
-  :num-threads 1
+  :num-threads 8
   :population-size 1000
   :generations 10
   :minimum-program-length 1
@@ -35,7 +35,7 @@
   ;; tpg parameters
   :initial-minimum-number-of-learners 2
   :initial-maximum-number-of-learners 5
-  :minimum-number-of-learners 22
+  :minimum-number-of-learners 2
   :maximum-number-of-learners 10
   ;; todo -- replace ryan's constants with stephen's
   ;;; team mutation probabilities

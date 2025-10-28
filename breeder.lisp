@@ -30,9 +30,9 @@
                       (push (mutate-program parent) new-programs)))
            `(LINEAR-GP ,@(append (programs model) (nreverse new-programs)))))))
 
-(defun breeder (model dataset log-fn)
+(defun breeder (eval-fn model log-fn)
   (let* ((population-size (experiment-population-size *experiment*))
-         (scores (execute model dataset))
+         (scores (funcall eval-fn model))
          (model-after-selection (select #'select-top-R model scores))
          (parents (cond ((tpg-p model)
                          (intersection (root-teams model) (root-teams model-after-selection) :test #'equal))
@@ -44,4 +44,3 @@
                      (- population-size (length (programs model-after-selection)))))))
     (funcall log-fn scores)
     (fill-N-offspring model-after-selection parents gap)))
-

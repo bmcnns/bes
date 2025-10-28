@@ -12,7 +12,7 @@
                 #:pmap
                 #:end-kernel)
   (:shadow :report)
-  (:export evolve defdataset defexperiment execute-team))
+  (:export evolve defdataset defexperiment execute-team root-team-ids multi-thread build-learner-table build-team-table find-team-by-id find-learner-by-id atomic-p get-reference learner-action team-learners learner-id))
 
 (in-package :bes)
                 

@@ -1,3 +1,5 @@
+(in-package :bes)
+
 (defun rebuild-tpg (tpg survivor-ids)
   "Given TPG and a list of ROOT TEAM IDs to keep,
    return a TPG with only the ROOT TEAMs specified
@@ -29,12 +31,16 @@
   (rebuild-tpg model (funcall selection-fn scores)))
 
 (defun add-learners-to-tpg (tpg learners)
-  `(TPG
-    (LEARNERS ,@(append (learners tpg) learners))
-    (TEAMS ,@(teams tpg))))
+  (if learners
+    `(TPG
+      (LEARNERS ,@(append (learners tpg) learners))
+      (TEAMS ,@(teams tpg)))
+    tpg))
 
 (defun add-teams-to-tpg (tpg teams)
-  `(TPG
-    (LEARNERS ,@(learners tpg))
-    (TEAMS ,@(append (teams tpg) teams))))
+  (if teams
+      `(TPG
+        (LEARNERS ,@(learners tpg))
+        (TEAMS ,@(append (teams tpg) teams)))
+      tpg))
 

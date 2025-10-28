@@ -15,7 +15,7 @@
   :constant-range '(-10.0 10.0)
   :objectives (accuracy)
   :tournament-size 4
-  :num-threads 1
+  :num-threads 8
   :population-size 1000
   :generations 10
   :minimum-program-length 1

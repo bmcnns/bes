@@ -130,3 +130,15 @@
                 (error "Team ID not found while searching internal teams. ~A in ~A~%" id tpg))
         (push (gethash id team-table) internal-teams)))
     internal-teams))
+
+
+(defun select-champion (tpg rollout-fn)
+  (let* ((scores (funcall rollout-fn tpg))
+         (min-score (reduce #'min (mapcar #'cdaadr scores)))
+         (best-teams (mapcar #'car (remove-if-not (lambda (score)
+                                                        (equal score min-score))
+                                                      scores :key #'cdaadr))))
+    (sort best-teams #'< :key (lambda (team-id) (team-complexity tpg team-id)))
+    (first best-teams)))
+    
+         

@@ -145,14 +145,16 @@ RESULT can be a list of registers or a batch of list of registers."
 
 
 (defun get-cached-program (program-id)
-  (gethash program-id *program-cache*))
+  (bt:with-lock-held (*program-cache-lock*)
+                     (gethash program-id *program-cache*)))
 
 (defun set-cached-program (program-id compiled-program)
   (bt:with-lock-held (*program-cache-lock*)
     (setf (gethash program-id *program-cache*) compiled-program)))
     
 (defun clear-cache ()
-  (setf *program-cache* (make-hash-table :test 'equal)))
+  (bt:with-lock-held (*program-cache-lock*)
+    (setf *program-cache* (make-hash-table :test 'equal))))
 
 (defun execute-program (program observations &key show-all-registers)
   "Convenience function to evaluate a GENOTYPE on OBSERVATIONS.

@@ -56,6 +56,9 @@
                  collect (random-instruction))))
     `(PROGRAM ,(funcall *program-id-generator*) ,instructions)))
 
+(defun instruction-registers (instruction)
+  (remove (second instruction) instruction))
+
 (defun program-p (form)
   (and
    (listp form)
@@ -171,7 +174,7 @@ RESULT can be a list of registers or a batch of list of registers."
     (error "Tried to execute a program but the thing you're trying to execute~%is not a program. ~A" program))
   (let ((compiled-program (or (get-cached-program (program-id program))
                               (set-cached-program (program-id program)
-                                    (compile-program (program-instructions program) :show-all-registers show-all-registers)))))
+                                    (compile-program (strip-introns (program-instructions program)) :show-all-registers show-all-registers)))))
     (clamp-registers (funcall compiled-program observations))))
 
 (defun eval-program (program dataset)
@@ -184,3 +187,27 @@ RESULT can be a list of registers or a batch of list of registers."
 
 (defun program-complexity (program)
   (length (program-instructions program)))
+
+(defun last-instruction (instructions)
+  (car (last instructions)))
+
+(defun instruction-dest (instruction)
+  (first instruction))
+
+(defun strip-introns (instructions &key (live-registers '(R1)) (live-instructions '()))
+  (if (endp instructions)
+      live-instructions
+      (let* ((last-instruction (last-instruction instructions))
+             (destination (instruction-dest last-instruction))
+             (all-registers (instruction-registers last-instruction)))
+        (if (member destination live-registers)
+            (strip-introns (butlast instructions)
+                           :live-registers (remove-duplicates (remove destination (union live-registers all-registers)))
+                           :live-instructions (cons last-instruction live-instructions))
+            (strip-introns (butlast instructions)
+                           :live-registers live-registers
+                           :live-instructions live-instructions)))))
+
+(defun remove-introns (program)
+  `(PROGRAM ,(program-id program)
+            (,@(strip-introns (program-instructions program)))))

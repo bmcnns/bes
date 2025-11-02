@@ -140,5 +140,20 @@
                                                       scores :key #'cdaadr))))
     (sort best-teams #'< :key (lambda (team-id) (team-complexity tpg team-id)))
     (first best-teams)))
-    
-         
+
+(defun remove-learners (tpg learner-ids)
+  ;; remove learner ids from all teams
+  (let* ((teams (teams tpg))
+         (modified-teams (loop for team in teams
+                               collect `(TEAM ,(team-id team)
+                                              ,@(remove-if (lambda (learner) (member learner learner-ids))
+                                                          (team-learners team))))))
+    (remove-dangling-learners `(TPG (LEARNERS ,@(learners tpg))
+                                    (TEAMS ,@modified-teams)))))
+
+(defun prune-tpg (tpg)
+  `(TPG
+    (LEARNERS
+     ,@(mapcar #'clean-learner (learners tpg)))
+    (TEAMS
+     ,@(teams tpg))))

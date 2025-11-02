@@ -74,3 +74,10 @@
               (team-complexity tpg (get-reference action)
                                :learner-table learner-table :team-table team-table))
              (t 0)))))
+
+(defun clean-learner (learner)
+  `(LEARNER ,(learner-id learner)
+            ,(remove-introns (learner-program learner))
+            ,(if (program-p (learner-action learner))
+                 (remove-introns  (learner-action learner))
+                 (learner-action learner))))

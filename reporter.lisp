@@ -21,7 +21,12 @@
             (format output " ~,6F" (cdr pair)))
           (terpri output)))
       (finish-output output))))
-   
+
+(defun timestamp ()
+  (multiple-value-bind (sec min hour)
+      (decode-universal-time (get-universal-time))
+    (format nil "~2,'0D:~2,'0D:~2,'0D" hour min sec)))
+
 (defun make-aggregate-score-logger (file-name)
   "Append one line per GENERATION: for each objective => min mean max."
   (let ((output (open file-name
@@ -37,11 +42,12 @@
                              (list (format nil "~A_min" obj)
                                    (format nil "~A_mean" obj)
                                    (format nil "~A_max" obj)))))
-          (format output "generation ~{~A~^ ~}~%" header)
+          (format output "ts generation ~{~A~^ ~}~%" header)
           (setf header-written t)))
 
       (let ((objectives (mapcar #'car (cadar scores))))
-        (format output "~A" generation)
+        (format output "~A " (timestamp))
+        (format output "~A " generation)
         (dolist (obj objectives)
           (let* ((vals (mapcar (lambda (s)
                                  ;; s = (id . (ALIST)), so the ALIST is (cadar s)
@@ -50,6 +56,6 @@
                  (mn  (reduce #'min vals))
                  (mx  (reduce #'max vals))
                  (avg (/ (reduce #'+ vals) (length vals))))
-            (format output " ~,6F ~,6F ~,6F" mn avg mx))))
+            (format output "~,6F ~,6F ~,6F" mn avg mx))))
       (terpri output)
       (finish-output output))))

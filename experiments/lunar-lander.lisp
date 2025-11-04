@@ -1,10 +1,12 @@
+(ql:quickload :bes)
 (in-package :bes)
+
+(setf *random-state* (make-random-state t))
 
 (defdataset *LunarLander-Expert-v3*
   :path "~/.datasets/LunarLander-Expert-v3")
 
-(defdataset *Minimal-LunarLander-Expert-v3*
-  :path "~/.datasets/Minimal-LunarLander-Expert-v3")
+(setf *dataset* (batch *LunarLander-Expert-v3* 0 25000))
 
 (defexperiment *LunarLander-v3*
   :batch-size 1000
@@ -43,5 +45,15 @@
   :learner-atomic-action-probability 0.5
   :mutate-team-probability 1.0)
 
-(defvar *experiment* nil)
-(setf *experiment* *LunarLander-v3*)
+(defparameter *experiment* *LunarLander-v3*)
+(defparameter *eval-fn* (make-execute-on-dataset-fn *dataset*))
+(defparameter *results-folder* (format nil "/Users/brycemacinnis/experiments/lunar-lander/~A/" (substitute #\- #\: (timestamp))))
+
+(ensure-directories-exist *results-folder*) 
+
+(evolve #'breeder *eval-fn*
+        :mode 'tpg
+        :budget 150
+        :log-file (concatenate 'string *results-folder* "scores.dat")
+        :save-file (concatenate 'string *results-folder* "agent.tpg"))
+

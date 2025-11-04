@@ -133,6 +133,7 @@
 
 
 (defun select-champion (tpg rollout-fn)
+  (clear-cache)
   (let* ((scores (funcall rollout-fn tpg))
          (min-score (reduce #'min (mapcar #'cdaadr scores)))
          (best-teams (mapcar #'car (remove-if-not (lambda (score)

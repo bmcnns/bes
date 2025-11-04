@@ -233,6 +233,7 @@ Returns NIL if LIST is empty. Ties go to the first max."
     (format stream "~A" model)))
 
 (defun load-model (file-name)
+  (clear-cache)
   (with-open-file (stream file-name
                           :direction :input)
     (read stream)))
@@ -252,3 +253,14 @@ Returns NIL if LIST is empty. Ties go to the first max."
 (defun mean (seq)
   (/ (apply #'+ seq) (length seq)))
   
+(defun mean-reward (scores)
+  (mean (mapcar #'cdaadr scores)))
+
+(defun best-reward (scores)
+  (reduce #'min (mapcar #'cdaadr scores)))
+
+
+(defun sha256 (string)
+    (let* ((bytes (ironclad:ascii-string-to-byte-array string))
+            (digest (ironclad:digest-sequence :sha256 bytes)))
+    (ironclad:byte-array-to-hex-string digest)))

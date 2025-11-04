@@ -19,6 +19,7 @@
                                   (log-file "scores.dat")
                                   (save-file nil)
                                   (initial-model nil))
+  (setf *lucky-breaks* (make-hash-table :test #'equal))
   (let ((model
           (if initial-model
               initial-model

@@ -13,7 +13,7 @@
 (defvar *eval-fn* nil)
 
 (defun run-experiments (trials)
-  (loop for i from 2 to trials
+  (loop for i from 3 to trials
         do (loop for (experiment-name minimal-dataset complete-dataset experiment env-name) in *configurations*
                  do (progn
                       (format t "~A [~A/~A]~%" experiment-name i trials)

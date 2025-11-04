@@ -1,10 +1,12 @@
+(ql:quickload :bes)
 (in-package :bes)
+
+(setf *random-state* (make-random-state t))
 
 (defdataset *MountainCar-Expert-v0*
   :path "~/.datasets/MountainCar-Expert-v0")
 
-(defdataset *Minimal-MountainCar-Expert-v0*
-  :path "~/.datasets/Minimal-MountainCar-Expert-v0")
+(setf *dataset* (batch *MountainCar-Expert-v0* 0 1000))
 
 (defexperiment *MountainCar-v0*
   :batch-size 1000
@@ -32,20 +34,25 @@
   :constant-mutation-std 1.0
   :maximum-instruction-count 256
   :actions '(0 1 2)
-  ;; tpg parameters
   :initial-minimum-number-of-learners 2
   :initial-maximum-number-of-learners 5
   :minimum-number-of-learners 2
   :maximum-number-of-learners 10
-  ;; todo -- replace ryan's constants with stephen's
-  ;;; team mutation probabilities
   :mutate-learner-probability 0.3
   :add-learner-probability 0.7
   :remove-learner-probability 0.7
-  ;;; learner mutation probabilities
   :mutate-learner-program-vs-action-probability 0.66
   :learner-atomic-action-probability 0.5
   :mutate-team-probability 1.0)
 
-(defvar *experiment* nil)
-(setf *experiment* *MountainCar-v0*)
+(defparameter *experiment* *MountainCar-v0*)
+(defparameter *eval-fn* (make-execute-on-dataset-fn *dataset*))
+(defparameter *results-folder* (format nil "/Users/brycemacinnis/experiments/mountain-car/~A/" (substitute #\- #\: (timestamp))))
+
+(ensure-directories-exist *results-folder*) 
+
+(evolve #'breeder *eval-fn*
+        :mode 'tpg
+        :budget 50
+        :log-file (concatenate 'string *results-folder* "scores.dat")
+        :save-file (concatenate 'string *results-folder* "agent.tpg"))

@@ -28,7 +28,28 @@
               (TEAMS ,@(loop for team being the hash-values of teams collect team)))))))
 
 (defun select (selection-fn model scores)
-  (rebuild-tpg model (funcall selection-fn scores)))
+  "Perform selection with lucky-break protection (flywheel style)."
+  (let* ((selected-ids (funcall selection-fn scores))
+         (new-teams '()))
+    (loop for team in (teams model)
+          for id = (team-id team)
+          do (cond
+               ;; Keep if selected normally
+               ((member id selected-ids :test #'equal)
+                (push team new-teams))
+
+               ;; Keep if has lucky break (and decrement)
+               ((get-lucky-breaks id)
+                (spend-lucky-break id)
+                (push team new-teams))))
+    ;; --- Log current lucky-break table before filling offspring ---
+    (bt:with-lock-held (*lucky-breaks-lock*)
+      (maphash (lambda (k v)
+                 (format t "~A: ~A~%" k v)
+                 (finish-output))
+               *lucky-breaks*))
+
+    (rebuild-tpg model (mapcar #'team-id new-teams))))
 
 (defun add-learners-to-tpg (tpg learners)
   (if learners

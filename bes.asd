@@ -3,17 +3,12 @@
   :version "0.2"
   :author "Bryce MacInnis"
   :license "GPL-3"
-  :depends-on ("lparallel" "py4cl")
+  :depends-on ("lparallel" "py4cl" "ironclad")
   :components ((:file "package")
                (:file "utils")
                (:file "instructions")
                (:file "dataset")
                (:file "experiments")
-               (:file "experiments/hopper")
-               (:file "experiments/cartpole")
-               (:file "experiments/lunar-lander")
-               (:file "experiments/mountain-car")
-               (:file "experiments/acrobot")
                (:file "fitness")
                (:file "program")
                (:file "mutation")

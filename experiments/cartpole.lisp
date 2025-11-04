@@ -1,10 +1,12 @@
+(ql:quickload :bes)
 (in-package :bes)
+
+(setf *random-state* (make-random-state t))
 
 (defdataset *CartPole-Expert-v1*
   :path "~/.datasets/CartPole-Expert-v1")
 
-(defdataset *Minimal-CartPole-Expert-v1*
-  :path "~/.datasets/Minimal-CartPole-Expert-v1")
+(setf *dataset* (sample *CartPole-Expert-v1* :n 25000))
 
 (defexperiment *CartPole-v1*
   :batch-size 500
@@ -17,7 +19,7 @@
   :tournament-size 4
   :num-threads 8
   :population-size 1000
-  :generations 10
+  :generations 1000
   :minimum-program-length 1
   :maximum-program-length 100
   :observation-probability 0.5
@@ -47,5 +49,14 @@
   :learner-atomic-action-probability 0.5
   :mutate-team-probability 1.0)
 
-(defvar *experiment* nil)
-(setf *experiment* *CartPole-v1*)
+(defparameter *experiment* *CartPole-v1*)
+(defparameter *eval-fn* (make-execute-on-dataset-fn *dataset*))
+(defparameter *results-folder* (format nil "/Users/brycemacinnis/experiments/cartpole/~A/" (substitute #\- #\: (timestamp))))
+
+(ensure-directories-exist *results-folder*) 
+
+(evolve #'breeder *eval-fn*
+        :mode 'tpg
+        :budget 50
+        :log-file (concatenate 'string *results-folder* "scores.dat")
+        :save-file (concatenate 'string *results-folder* "agent.tpg"))

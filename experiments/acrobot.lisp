@@ -1,13 +1,15 @@
+(ql:quickload :bes)
 (in-package :bes)
+
+(setf *random-state* (make-random-state t))
 
 (defdataset *Acrobot-Expert-v1*
   :path "~/.datasets/Acrobot-Expert-v1")
 
-(defdataset *Minimal-Acrobot-Expert-v1*
-  :path "~/.datasets/Minimal-Acrobot-Expert-v1")
+(setf *dataset* (batch *Acrobot-Expert-v1* 0 1000))
 
 (defexperiment *Acrobot-v1*
-  :batch-size 200
+  :batch-size 1000
   :instruction-set (ADD SUB MUL DIV SIN COS LOG EXP)
   :registers (R from 1 to 12) 
   :observations (OBS from 1 to 6)
@@ -47,5 +49,15 @@
   :learner-atomic-action-probability 0.5
   :mutate-team-probability 1.0)
 
-(defvar *experiment* nil)
-(setf *experiment* *Acrobot-v1*)
+
+(defparameter *experiment* *Acrobot-v1*)
+(defparameter *eval-fn* (make-execute-on-dataset-fn *dataset*))
+(defparameter *results-folder* (format nil "/Users/brycemacinnis/experiments/acrobot/~A/" (substitute #\- #\: (timestamp))))
+
+(ensure-directories-exist *results-folder*) 
+
+(evolve #'breeder *eval-fn*
+        :mode 'tpg
+        :budget 50
+        :log-file (concatenate 'string *results-folder* "scores.dat")
+        :save-file (concatenate 'string *results-folder* "agent.tpg"))

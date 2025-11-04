@@ -147,17 +147,35 @@ RESULT can be a list of registers or a batch of list of registers."
               result)))
 
 
-(defun get-cached-program (program-id)
+(defun get-cached-program (key)
   (bt:with-lock-held (*program-cache-lock*)
-                     (gethash program-id *program-cache*)))
+                     (gethash key *program-cache*)))
 
-(defun set-cached-program (program-id compiled-program)
+(defun set-cached-program (key compiled-program)
   (bt:with-lock-held (*program-cache-lock*)
-    (setf (gethash program-id *program-cache*) compiled-program)))
+    (setf (gethash key *program-cache*) compiled-program)))
     
 (defun clear-cache ()
   (bt:with-lock-held (*program-cache-lock*)
     (setf *program-cache* (make-hash-table :test 'equal))))
+
+;; (defun execute-program (program observations &key show-all-registers)
+;;   "Convenience function to evaluate a GENOTYPE on OBSERVATIONS.
+;;    Internally compiles the genotype into a function using CONVERT-TO-PHENOTYPE and
+;;    immediately calls it.
+
+;;    OBSERVATIONS may be:
+;;    - A single input (list)
+;;    - A batch of inputs (list of lists)
+
+;;    SHOW-ALL-REGISTERS (optional): If true, returns all registers;
+;;    otherwise, return the output register(s) defined in EXPERIMENT."
+;;   (unless (program-p program)
+;;     (error "Tried to execute a program but the thing you're trying to execute~%is not a program. ~A" program))
+;;   (let ((compiled-program (or (get-cached-program (sha256 (write-to-string (program-instructions program))))
+;;                               (set-cached-program (sha256 (write-to-string (program-instructions program)))
+;;                                     (compile-program (strip-introns (program-instructions program)) :show-all-registers show-all-registers)))))
+;;     (clamp-registers (funcall compiled-program observations))))
 
 (defun execute-program (program observations &key show-all-registers)
   "Convenience function to evaluate a GENOTYPE on OBSERVATIONS.
@@ -176,6 +194,7 @@ RESULT can be a list of registers or a batch of list of registers."
                               (set-cached-program (program-id program)
                                     (compile-program (strip-introns (program-instructions program)) :show-all-registers show-all-registers)))))
     (clamp-registers (funcall compiled-program observations))))
+
 
 (defun eval-program (program dataset)
   (let* ((predictions (execute-program program (observations dataset))))

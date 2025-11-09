@@ -33,28 +33,6 @@
                  (end (+ start batch-size)))
             (batch dataset start end))))))
 
-(defun min-cdr (alist)
-  "Return the minimum CDR value in a list like (((k . v)) ...)."
-  (apply #'min (mapcar (lambda (x) (cdr (car x))) alist)))
-
-(defun action-frequencies (dataset)
-  (loop for action in (experiment-actions *experiment*)
-        collect (frequency-if (actions dataset) (lambda (act) (equal act action)))))
-
-(defun uniform-sample (dataset batch-size)
-  (let* ((table (make-hash-table :test #'equal))
-         (action-freqs (action-frequencies dataset))
-         (action-count (min batch-size (min-cdr action-freqs)))
-         (trajectories '()))
-    (loop for action in (experiment-actions *experiment*)
-          do (setf (gethash action table) 0))
-    (loop for trajectory in (shuffle dataset)
-          when (< (gethash (action trajectory) table) action-count)
-            do (progn
-                 (incf (gethash (action trajectory) table))
-                 (push trajectory trajectories)))
-    trajectories))
-
 (defun observations (transitions)
   "Return a list of observations from TRANSITIONS.
    Each element of TRANSITIONS is expected to be a list where the first element is the observations."

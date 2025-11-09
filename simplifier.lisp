@@ -87,4 +87,5 @@
           :initial-value tpg))
 
 (defun postprocess (tpg team-id env-name)
+  (clear-cache)
   (break-all-chains (remove-hitch-hikers (prune-tpg (rebuild-tpg tpg (list team-id))) team-id env-name)))

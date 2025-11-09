@@ -19,6 +19,7 @@
                                   (log-file "scores.dat")
                                   (save-file nil)
                                   (initial-model nil))
+  (clear-cache)
   (setf *lucky-breaks* (make-hash-table :test #'equal))
   (let ((model
           (if initial-model
@@ -42,6 +43,39 @@
            (values model))
       (when save-file
         (save-model save-file model)))))
+
+(defun evolve-with-data-tracking (strategy eval-fn &key
+                                  (budget 100)
+                                  (mode 'lgp)
+                                  (log-file "scores.dat")
+                                  (save-file nil)
+                                  (initial-model nil))
+  (clear-cache)
+  (setf *num-datapoints-so-far* 0)
+  (setf *lucky-breaks* (make-hash-table :test #'equal))
+  (let ((model
+          (if initial-model
+              initial-model
+              (case mode
+                (lgp (make-linear-gp))
+                (tpg (make-tpg))
+                (otherwise (error "Mode is not supported. ~A~%" mode)))))
+        (logger (make-aggregate-score-and-data-logger log-file)))
+    (unwind-protect
+         (progn 
+           (loop for generation from 1 to budget
+                 do (progn (when (zerop (mod generation 10))
+                             (clear-cache))
+                           (setf model (funcall strategy eval-fn model (lambda (scores num-datapoints)
+                                                                         (funcall logger generation scores num-datapoints))))
+                           (format t "Generation ~A complete.~%" generation)
+                           (when (zerop (mod generation 10))
+                             (with-output-to-string (s)
+                               (room)))))
+           (values model))
+      (when save-file
+        (save-model save-file model)))))
+
 
 
 ;; an evaluation function is anything that takes a model and returns

@@ -138,6 +138,39 @@
         (mutate-instruction genotype)
         new-genotype)))
 
+(defun mutate-instructions (genotype)
+  "Apply potential mutations to each instruction in GENOTYPE independently.
+   Each instruction may mutate its destination, opcode, or one of its arguments,
+   chosen uniformly. If no change occurs, the original instruction is retained."
+  (let ((mutated-genotype (mapcar
+                           (lambda (instr)
+                             (if (bernoulli (experiment-mutate-instruction-probability *experiment*))
+                                 (let ((choice-of-mutation (random-choice '(destination opcode args))))
+                                   (cond ((eq choice-of-mutation 'destination)
+                                          (loop for x in instr
+                                                for i from 0
+                                                collect (if (= i 0) (mutate-dest x) x)))
+
+                                         ((eq choice-of-mutation 'opcode)
+                                          (loop for x in instr
+                                                for i from 0
+                                                collect (if (= i 1) (mutate-opcode x) x)))
+
+                                         ((eq choice-of-mutation 'args)
+                                          (let* ((arg-index (random-range 2 (length instr)))
+                                                 (old-arg (nth arg-index instr))
+                                                 (new-arg (mutate-argument old-arg)))
+                                            (loop for x in instr
+                                                  for i from 0
+                                                  collect (if (= i arg-index) new-arg x))))
+
+                                         (t instr)))
+                                 instr))
+                           genotype)))
+    (if (equal mutated-genotype genotype)
+        (mutate-instructions genotype)
+        mutated-genotype)))
+
 (defun maybe-add-instruction (genotype)
   "Add a new instruction to GENOTYPE with a probability defined by *EXPERIMENT*.
    Only adds if the GENOTYPE's instruction count is below the *EXPERIMENT*'s maximum."
@@ -199,8 +232,10 @@
                        (maybe-add-instruction)
                        (maybe-remove-instruction)
                        (maybe-swap-instructions)
-                       (maybe-mutate-instruction)
+                       (mutate-instructions)
                        (maybe-mutate-constant))))
+      ;#(loop repeat (length instructions)
+      ;      do (setf mutated (maybe-mutate-instruction mutated)))
       `(PROGRAM ,new-id ,mutated))))
 
 (defun mutate-learner-action-to-atomic (tpg learner)

@@ -1,33 +1,5 @@
 (in-package :bes)
 
-(defparameter *lucky-breaks* (make-hash-table :test #'equal))
-(defparameter *lucky-breaks-lock* (bt:make-lock "lucky-breaks-lock"))
-
-(defun get-lucky-breaks (team-id)
-  (bt:with-lock-held (*lucky-breaks-lock*)
-    (gethash team-id *lucky-breaks*)))
-
-(defun add-lucky-break (team-id)
-  (bt:with-lock-held (*lucky-breaks-lock*)
-    (incf (gethash team-id *lucky-breaks* 0))))
-
-(defun spend-lucky-break (team-id)
-  (bt:with-lock-held (*lucky-breaks-lock*)
-    (let* ((current (gethash team-id *lucky-breaks* 0))
-           (new-val (1- current)))
-      (format t "Lucky break spent for ~A (now ~A)~%" team-id new-val)
-      (cond
-        ;; no more lucky breaks: remove completely
-        ((<= new-val 0)
-         (remhash team-id *lucky-breaks*)
-         (format t "Lucky break expired for ~A~%" team-id)
-         nil)
-        ;; still has lucky breaks left: update the count
-        (t
-         (setf (gethash team-id *lucky-breaks*) new-val)
-         t)))))
-
-
 (defun select-top-R (fitness-scores &key (R 0.20) (key #'first-objective) (pred #'<))
   "Given a set of SCORES of (INDIVIDUAL-ID ((OBJ1 .. OBJ1-SCORE)..(OBJN .. OBJN-SCORE)))
    Return the top R PERCENTAGE of INDIVIDUALs using SCORES sorted by KEY.
@@ -61,15 +33,6 @@
   (let* ((population-size (experiment-population-size *experiment*))
          ;; 1. Evaluate current population
          (scores (funcall eval-fn model)))
-
-    ;; ;;--- 2. Award lucky breaks to top performers (for upcoming selection) ---
-    ;; (let* ((sorted (sort (copy-list scores) #'< :key #'first-objective))
-    ;;        ;; Adjust '1' to a larger number (e.g., 3 or 5) if you want more elites spared
-    ;;        (top-ids (mapcar #'car (subseq sorted 0 (min 2 (length sorted))))))
-    ;;   (bt:with-lock-held (*lucky-breaks-lock*)
-    ;;     (dolist (id top-ids)
-    ;;       (incf (gethash id *lucky-breaks* 0))
-    ;;      (format t "Lucky break awarded to ~A~%" id))))
 
     ;; --- 3. Selection (spend breaks here if applicable) ---
     (let* ((model-after-selection (select #'select-top-R model scores))
@@ -105,14 +68,6 @@
         (funcall eval-fn model)
 
       (incf *num-datapoints-so-far* num-datapoints)
-      ;; --- 2. Award lucky breaks to top performers (for upcoming selection) ---
-      (let* ((sorted (sort (copy-list scores) #'< :key #'first-objective))
-             ;; Adjust '1' to a larger number (e.g., 3 or 5) if you want more elites spared
-             (top-ids (mapcar #'car (subseq sorted 0 (min 10 (length sorted))))))
-        (bt:with-lock-held (*lucky-breaks-lock*)
-          (dolist (id top-ids)
-            (incf (gethash id *lucky-breaks* 0))
-            (format t "Lucky break awarded to ~A~%" id))))
 
       ;; --- 3. Selection (spend breaks here if applicable) ---
       (let* ((model-after-selection (select #'select-top-R model scores))

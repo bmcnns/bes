@@ -20,7 +20,6 @@
                                   (save-file nil)
                                   (initial-model nil))
   (clear-cache)
-  (setf *lucky-breaks* (make-hash-table :test #'equal))
   (let ((model
           (if initial-model
               initial-model

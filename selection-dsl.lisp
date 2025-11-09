@@ -36,18 +36,7 @@
           do (cond
                ;; Keep if selected normally
                ((member id selected-ids :test #'equal)
-                (push team new-teams))
-
-               ;; Keep if has lucky break (and decrement)
-               ((get-lucky-breaks id)
-                (spend-lucky-break id)
                 (push team new-teams))))
-    ;; --- Log current lucky-break table before filling offspring ---
-    (bt:with-lock-held (*lucky-breaks-lock*)
-      (maphash (lambda (k v)
-                 (format t "~A: ~A~%" k v)
-                 (finish-output))
-               *lucky-breaks*))
 
     (rebuild-tpg model (mapcar #'team-id new-teams))))
 

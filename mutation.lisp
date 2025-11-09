@@ -232,10 +232,8 @@
                        (maybe-add-instruction)
                        (maybe-remove-instruction)
                        (maybe-swap-instructions)
-                       (mutate-instructions)
+                       (maybe-mutate-instruction)
                        (maybe-mutate-constant))))
-      ;#(loop repeat (length instructions)
-      ;      do (setf mutated (maybe-mutate-instruction mutated)))
       `(PROGRAM ,new-id ,mutated))))
 
 (defun mutate-learner-action-to-atomic (tpg learner)

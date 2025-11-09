@@ -28,7 +28,7 @@
          t)))))
 
 
-(defun select-top-R (fitness-scores &key (R 0.2) (key #'first-objective) (pred #'<))
+(defun select-top-R (fitness-scores &key (R 0.20) (key #'first-objective) (pred #'<))
   "Given a set of SCORES of (INDIVIDUAL-ID ((OBJ1 .. OBJ1-SCORE)..(OBJN .. OBJN-SCORE)))
    Return the top R PERCENTAGE of INDIVIDUALs using SCORES sorted by KEY.
    By default, the KEY is OBJ1-SCORE and the LOWEST VALUES are selected."
@@ -62,14 +62,14 @@
          ;; 1. Evaluate current population
          (scores (funcall eval-fn model)))
 
-    ;; --- 2. Award lucky breaks to top performers (for upcoming selection) ---
-    (let* ((sorted (sort (copy-list scores) #'< :key #'first-objective))
-           ;; Adjust '1' to a larger number (e.g., 3 or 5) if you want more elites spared
-           (top-ids (mapcar #'car (subseq sorted 0 (min 3 (length sorted))))))
-      (bt:with-lock-held (*lucky-breaks-lock*)
-        (dolist (id top-ids)
-          (incf (gethash id *lucky-breaks* 0))
-          (format t "Lucky break awarded to ~A~%" id))))
+    ;; ;;--- 2. Award lucky breaks to top performers (for upcoming selection) ---
+    ;; (let* ((sorted (sort (copy-list scores) #'< :key #'first-objective))
+    ;;        ;; Adjust '1' to a larger number (e.g., 3 or 5) if you want more elites spared
+    ;;        (top-ids (mapcar #'car (subseq sorted 0 (min 2 (length sorted))))))
+    ;;   (bt:with-lock-held (*lucky-breaks-lock*)
+    ;;     (dolist (id top-ids)
+    ;;       (incf (gethash id *lucky-breaks* 0))
+    ;;      (format t "Lucky break awarded to ~A~%" id))))
 
     ;; --- 3. Selection (spend breaks here if applicable) ---
     (let* ((model-after-selection (select #'select-top-R model scores))
@@ -92,4 +92,47 @@
       ;; --- 7. Fill population back to full size with mutated offspring ---
       (let ((new-model (fill-N-offspring model-after-selection parents gap)))
         ;; --- 8. Return new model (tail call friendly) ---
-        new-model))))
+       new-model))))
+
+(defvar *num-datapoints-so-far* 0)
+
+(defun breeder-with-data-tracking (eval-fn model log-fn)
+  "Thread-safe breeder with delayed lucky-break spending (Option B / Python-style flywheel).
+   Returns the next-generation model (TPG or LINEAR-GP)."
+  (let* ((population-size (experiment-population-size *experiment*)))
+    ;; 1. Evaluate current population
+    (multiple-value-bind (scores num-datapoints)
+        (funcall eval-fn model)
+
+      (incf *num-datapoints-so-far* num-datapoints)
+      ;; --- 2. Award lucky breaks to top performers (for upcoming selection) ---
+      (let* ((sorted (sort (copy-list scores) #'< :key #'first-objective))
+             ;; Adjust '1' to a larger number (e.g., 3 or 5) if you want more elites spared
+             (top-ids (mapcar #'car (subseq sorted 0 (min 10 (length sorted))))))
+        (bt:with-lock-held (*lucky-breaks-lock*)
+          (dolist (id top-ids)
+            (incf (gethash id *lucky-breaks* 0))
+            (format t "Lucky break awarded to ~A~%" id))))
+
+      ;; --- 3. Selection (spend breaks here if applicable) ---
+      (let* ((model-after-selection (select #'select-top-R model scores))
+             ;; 4. Determine parent pool
+             (parents (cond ((tpg-p model)
+                             (intersection (root-teams model)
+                                           (root-teams model-after-selection)
+                                           :test #'equal))
+                            ((linear-gp-p model)
+                             (programs model-after-selection))))
+             ;; 5. Compute how many new individuals are needed
+             (gap (cond ((tpg-p model)
+                         (- population-size (length (teams model-after-selection))))
+                        ((linear-gp-p model)
+                         (- population-size (length (programs model-after-selection)))))))
+
+        ;; --- 6. Log fitness statistics ---
+        (funcall log-fn scores *num-datapoints-so-far*)
+
+        ;; --- 7. Fill population back to full size with mutated offspring ---
+        (let ((new-model (fill-N-offspring model-after-selection parents gap)))
+          ;; --- 8. Return new model (tail call friendly) ---
+          new-model)))))

@@ -52,6 +52,9 @@
    the scalar reward received after the action taken."
   (mapcar #'caddr transitions))
 
+(defun reward (transition)
+  (caddr transition))
+
 (defun terminations (transitions)
   "Return a list of termination flags from TRANSITIONS.
    Each element of TRANSITIONS is expected to be a list where the fourth element is

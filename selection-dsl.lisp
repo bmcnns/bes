@@ -40,6 +40,19 @@
 
     (rebuild-tpg model (mapcar #'team-id new-teams))))
 
+(defun select-ids (model ids)
+  "Perform selection by ids."
+  (let* ((new-teams '()))
+    (loop for team in (teams model)
+          for id = (team-id team)
+          do (cond
+               ;; Keep if selected normally
+               ((member id ids :test #'equal)
+                (push team new-teams))))
+
+    (rebuild-tpg model (mapcar #'team-id new-teams))))
+
+
 (defun add-learners-to-tpg (tpg learners)
   (if learners
     `(TPG

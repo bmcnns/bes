@@ -232,7 +232,7 @@
                        (maybe-add-instruction)
                        (maybe-remove-instruction)
                        (maybe-swap-instructions)
-                       (maybe-mutate-instruction)
+                       (mutate-instructions)
                        (maybe-mutate-constant))))
       `(PROGRAM ,new-id ,mutated))))
 
@@ -244,6 +244,11 @@
     (if available-actions
         `(LEARNER ,new-learner-id ,(learner-program learner) ,(random-choice available-actions))
         learner)))
+
+(defun mutate-learner-action-program (tpg learner)
+  (declare (ignore tpg))
+  (let* ((new-learner-id (funcall *learner-id-generator*)))
+    `(LEARNER ,new-learner-id ,(learner-program learner) ,(mutate-program (learner-action learner)))))
 
 (defun safe-gotos-from-team (tpg from-id &optional (adj (build-adjacency tpg)))
   "All team-ids that won't create a cycle if FROM-ID points to them."
@@ -260,7 +265,9 @@
 (defun mutate-learner-action (tpg learner team)
   (let ((atomic-action-probability (experiment-learner-atomic-action-probability *experiment*)))
     (if (bernoulli atomic-action-probability)
-        (mutate-learner-action-to-atomic tpg learner)
+        (if (program-p (learner-action learner))
+            (mutate-learner-action-program tpg learner)
+            (mutate-learner-action-to-atomic tpg learner))
         (mutate-learner-action-to-reference tpg learner team))))
 
 (defun mutate-learner-program (learner)

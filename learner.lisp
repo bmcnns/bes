@@ -55,7 +55,9 @@
 
 (defun make-learner ()
   (let ((actions (experiment-actions *experiment*)))
-    `(LEARNER ,(funcall *learner-id-generator*) ,(make-program) ,(random-choice actions))))
+    (if actions
+      `(LEARNER ,(funcall *learner-id-generator*) ,(make-program) ,(random-choice actions))
+      `(LEARNER ,(funcall *learner-id-generator*) ,(make-program) ,(make-program)))))
 
 (defun learner-complexity (tpg learner-id &key
                                             (learner-table (build-learner-table tpg))

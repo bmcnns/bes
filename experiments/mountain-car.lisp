@@ -6,6 +6,9 @@
 (defdataset *MountainCar-Expert-v0*
   :path "~/.datasets/MountainCar-Expert-v0")
 
+(defdataset *Minimal-MountainCar-Expert-v0*
+  :path "~/.datasets/Minimal-MountainCar-Expert-v0")
+
 (setf *dataset* (batch *MountainCar-Expert-v0* 0 1000))
 
 (defexperiment *MountainCar-v0*

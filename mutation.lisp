@@ -71,33 +71,6 @@
           when (/= idx i)
             collect instr)))
 
-(defun mutate-constant (genotype)
-  "Select a random constant in GENOTYPE and perturb it using Gaussian noise
-   with standard deviation from *EXPERIMENT*. If no constants exists,
-   return the original GENOTYPE unchanged."
-  (let* ((constant-locations (loop for instr in genotype
-                                   for instr-idx from 0
-                                   append (loop for arg in (cddr instr)
-                                                for arg-idx from 2
-                                                when (numberp arg)
-                                                  collect (cons instr-idx arg-idx))))
-         (target (when constant-locations (random-choice constant-locations))))
-    (if (null target)
-        genotype
-        (let* ((std (experiment-constant-mutation-std *experiment*))
-               (instr-idx (car target))
-               (arg-idx (cdr target))
-               (old-instr (nth instr-idx genotype))
-               (old-const (nth arg-idx old-instr))
-               (new-const (normal old-const std))
-               (new-instr
-                 (loop for x in old-instr
-                       for i from 0
-                       collect (if (= i arg-idx) new-const x))))
-          (loop for instr in genotype
-                for i from 0
-                collect (if (= i instr-idx) new-instr instr))))))
-
 (defun mutate-instruction (genotype)
   "Mutate a randomly chosen instruction in GENOTYPE.
    The mutation may target:
@@ -203,15 +176,85 @@
     (if (bernoulli mutate-instruction-probability)
         (mutate-instruction genotype)
         genotype)))
-
-(defun maybe-mutate-constant (genotype)
-  "Mutate a constant in GENOTYPE using Gaussian noise, with probability defined by *EXPERIMENT*.
-   Only applies if the GENOTYPE contains a constant."
-  (let ((mutate-constant-probability (experiment-mutate-constant-probability *experiment*)))
-    (if (bernoulli mutate-constant-probability)
-        (mutate-constant genotype)
-        genotype)))
+   
+(defun eval-team-for-tuning (team tpg dataset &key learner-table team-table)
+  ;; Safety 0 + Speed 3 = Trust my types, go fast.
+  (declare (optimize (speed 3) (space 3) (safety 0))) 
+  (let* ((team-id (team-id team))
+         (obs-list (observations dataset))
+         (act-list (actions dataset))
+         (total-score 0))
     
+    ;; --- THE FIX ---
+    ;; We promise the compiler that total-score will always fit in a standard 64-bit integer.
+    (declare (type fixnum total-score)) 
+    
+    (loop for obs in obs-list
+          for correct-action in act-list
+          for prediction = (execute-team tpg team-id obs 
+                                         :learner-table learner-table 
+                                         :team-table team-table)
+          do (when (equal prediction correct-action)
+               ;; Now compiles to a single assembly ADD instruction
+               (incf total-score)))
+    total-score))
+
+(defun tune-constants-in-team (tpg team-id dataset)
+  "Use CMA-ES to search for the optimal constant values within the genotype."
+  (let* ((team (find-team-by-id tpg team-id))
+         (learner-ids (team-learners team))
+         (team-table (build-team-table tpg))
+         (learner-table (build-learner-table tpg))
+         (learners (loop for learner-id in learner-ids
+                         collect (find-learner-by-id tpg learner-id :learner-table learner-table)))
+         (num-constants (count-tunable-constants learners)))
+    (format t "~A~%" num-constants)
+    (when (> num-constants 0)
+      (labels ((get-fitness (x)
+                 (clear-cache)
+                 (let* ((substitutions (loop for new-learner in (replace-C-walk learners x)
+                                             for learner in learners
+                                             collect (cons learner new-learner)))
+                        (sol (sublis substitutions tpg)))
+                   (eval-team-for-tuning team sol dataset :team-table team-table :learner-table learner-table))))
+        (let* ((best-sol (cma-es:run #'get-fitness num-constants :generations 10))
+               (substitutions (loop for new-learner in (replace-C-walk learners best-sol)
+                                    for learner in learners
+                                    collect (cons learner new-learner))))
+          (clear-cache)
+          substitutions)))))
+
+(defun replace-tree-walk (predicate seq constants)
+  (let ((remaining-values constants))
+    (labels ((walker (node)
+               (cond ((funcall predicate node)
+                      (if remaining-values
+                          (pop remaining-values)
+                          (error "Not enough values to replace all instances of target-symbol.")))
+                     ((consp node)
+                      (cons (walker (car node))
+                            (walker (cdr node))))
+                     (t
+                      node))))
+      (walker seq))))
+
+(defun replace-C-walk (seq constants)
+  (replace-tree-walk (lambda (x) (or (equal x 'C) (sb-int:single-float-p x))) seq constants))
+
+(defun count-tunable-constants (learners)
+  "Given a sequence of LEARNERs, count how many constants there are."
+  (cond ((and (atom learners) (or (equal learners 'C)
+                                  (sb-int:single-float-p learners)
+                                  (sb-int:double-float-p learners))) 1)
+        ((atom learners) 0)
+        (t (reduce #'+ (mapcar (lambda (x) (count-tunable-constants x)) learners)))))
+         
+(defun tune-constants (tpg dataset)
+  (let ((current-tpg tpg))
+    (loop for team-id in (mapcar #'team-id (teams tpg))
+          do (setf current-tpg (sublis (tune-constants-in-team current-tpg team-id dataset) current-tpg)))
+    current-tpg))
+
 (defun mutate-program (program)
   "Apply a series of stochastic mutations to GENOTYPE according to the *EXPERIMENT*'s settings.
    Mutation steps include:
@@ -232,10 +275,7 @@
                        (maybe-add-instruction)
                        (maybe-remove-instruction)
                        (maybe-swap-instructions)
-                       (mutate-instructions)
-                       (maybe-mutate-constant))))
-      ;#(loop repeat (length instructions)
-      ;      do (setf mutated (maybe-mutate-instruction mutated)))
+                       (mutate-instructions))))
       `(PROGRAM ,new-id ,mutated))))
 
 (defun mutate-learner-action-to-atomic (tpg learner)
@@ -338,8 +378,7 @@
       (or (try-remove learners)
           team))))
 
-
-(Defun maybe-add-learner (tpg team &key (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
+(defun maybe-add-learner (tpg team &key (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
   (let ((add-learner-probability (experiment-add-learner-probability *experiment*)))
     (if (bernoulli add-learner-probability)
         (add-learner tpg team :learner-table learner-table :team-table team-table)
@@ -358,7 +397,11 @@
         (values team nil))))
 
 (defun mutate-team (tpg team &key (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
-  (maybe-mutate-learner tpg (maybe-remove-learner tpg (maybe-add-learner tpg team :learner-table learner-table :team-table team-table) :learner-table learner-table :team-table team-table) :learner-table learner-table :team-table team-table))
+   (maybe-mutate-learner tpg
+                        (maybe-remove-learner tpg
+                                              (maybe-add-learner tpg team :learner-table learner-table :team-table team-table)
+                                              :learner-table learner-table :team-table team-table)
+                        :learner-table learner-table :team-table team-table))
 
 (defun maybe-mutate-team (tpg team &key (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
   ;; ask malcolm if teams are always mutated -- or whether some teams are unmutated.
@@ -397,6 +440,7 @@
            (remove-dangling-learners `(TPG (LEARNERS ,@(append (learners tpg) (nreverse new-learners)))
                  (TEAMS ,@(append (teams tpg) (nreverse new-teams)))))))
 
+        
 (defun mutate (model &optional ids)
   "Given a list of individual IDs mutate them."
   (cond ((tpg-p model)

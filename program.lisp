@@ -15,7 +15,7 @@
   "Return a random constant sampled uniformly from the constant range in *EXPERIMENT*."
   (let* ((constant-range (experiment-constant-range *experiment*)))
     (destructuring-bind (lower-bound upper-bound) constant-range
-      (random-range lower-bound upper-bound))))
+      (coerce (random-range lower-bound upper-bound) 'double-float))))
 
 (defun random-register ()
   "Return a randomly selected register from *EXPERIMENT*."
@@ -177,6 +177,24 @@ RESULT can be a list of registers or a batch of list of registers."
 ;;                                     (compile-program (strip-introns (program-instructions program)) :show-all-registers show-all-registers)))))
 ;;     (clamp-registers (funcall compiled-program observations))))
 
+;; (defun execute-program (program observations &key show-all-registers)
+;;   "Convenience function to evaluate a GENOTYPE on OBSERVATIONS.
+;;    Internally compiles the genotype into a function using CONVERT-TO-PHENOTYPE and
+;;    immediately calls it.
+
+;;    OBSERVATIONS may be:
+;;    - A single input (list)
+;;    - A batch of inputs (list of lists)
+
+;;    SHOW-ALL-REGISTERS (optional): If true, returns all registers;
+;;    otherwise, return the output register(s) defined in EXPERIMENT."
+;;   (unless (program-p program)
+;;     (error "Tried to execute a program but the thing you're trying to execute~%is not a program. ~A" program))
+;;   (let ((compiled-program (or (get-cached-program (program-id program))
+;;                               (set-cached-program (program-id program)
+;;                                     (compile-program (strip-introns (program-instructions program)) :show-all-registers show-all-registers)))))
+;;     (clamp-registers (funcall compiled-program observations))))
+
 (defun execute-program (program observations &key show-all-registers)
   "Convenience function to evaluate a GENOTYPE on OBSERVATIONS.
    Internally compiles the genotype into a function using CONVERT-TO-PHENOTYPE and
@@ -190,10 +208,7 @@ RESULT can be a list of registers or a batch of list of registers."
    otherwise, return the output register(s) defined in EXPERIMENT."
   (unless (program-p program)
     (error "Tried to execute a program but the thing you're trying to execute~%is not a program. ~A" program))
-  (let ((compiled-program (or (get-cached-program (program-id program))
-                              (set-cached-program (program-id program)
-                                    (compile-program (strip-introns (program-instructions program)) :show-all-registers show-all-registers)))))
-    (clamp-registers (funcall compiled-program observations))))
+    (clamp-registers (funcall (compile-program (strip-introns (program-instructions program)) :show-all-registers show-all-registers) observations)))
 
 
 (defun eval-program (program dataset)

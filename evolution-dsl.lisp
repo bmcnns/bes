@@ -13,7 +13,7 @@
 (defun first-objective (score)
   (cdaadr score))
 
-(defun evolve (strategy eval-fn &key
+(defun evolve (strategy eval-fn dataset &key
                                   (budget 100)
                                   (mode 'lgp)
                                   (log-file "scores.dat")
@@ -34,7 +34,7 @@
                  do (progn (when (zerop (mod generation 10))
                              (clear-cache))
                            (setf model (funcall strategy eval-fn model (lambda (scores)
-                                                                         (funcall logger generation scores))))
+                                                                         (funcall logger generation scores)) dataset))
                            (format t "Generation ~A complete.~%" generation)
                            (when (zerop (mod generation 10))
                              (with-output-to-string (s)

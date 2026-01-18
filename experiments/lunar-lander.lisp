@@ -6,6 +6,9 @@
 (defdataset *LunarLander-Expert-v3*
   :path "~/.datasets/LunarLander-Expert-v3")
 
+(defdataset *Minimal-LunarLander-Expert-v3*
+  :path "~/.datasets/Minimal-LunarLander-Expert-v3")
+
 (setf *dataset* (batch *LunarLander-Expert-v3* 0 25000))
 
 (defexperiment *LunarLander-v3*
@@ -18,10 +21,10 @@
   :objectives (accuracy)
   :tournament-size 4
   :num-threads 8
-  :population-size 1000
+  :population-size 3
   :generations 10
   :minimum-program-length 1
-  :maximum-program-length 100
+  :maximum-program-length 10
   :observation-probability 0.5
   :constant-probability 0.5
   :mutate-instruction-probability 1.0

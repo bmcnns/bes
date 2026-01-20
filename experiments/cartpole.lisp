@@ -6,22 +6,23 @@
 (defdataset *CartPole-Expert-v1*
   :path "~/.datasets/CartPole-Expert-v1")
 
-(setf *dataset* (sample *CartPole-Expert-v1* :n 25000))
+(defvar *dataset*)
+(setf *dataset* (sample *CartPole-Expert-v1* :n 1000))
 
 (defexperiment *CartPole-v1*
-  :batch-size 500
+  :batch-size 1000
   :instruction-set (ADD SUB MUL DIV SIN COS LOG EXP)
-  :registers (R from 1 to 11) 
+  :registers (R from 1 to 8) 
   :observations (OBS from 1 to 4)
   :output-registers (R from 1 to 3)
   :constant-range '(-10.0 10.0)
   :objectives (accuracy)
   :tournament-size 4
   :num-threads 8
-  :population-size 1000
+  :population-size 3
   :generations 1000
   :minimum-program-length 1
-  :maximum-program-length 100
+  :maximum-program-length 5
   :observation-probability 0.5
   :constant-probability 0.5
   :mutate-instruction-probability 1.0

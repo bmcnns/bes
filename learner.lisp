@@ -41,13 +41,16 @@
 (defun register-zero (registers)
   (elt registers 0))
 
-(defun get-bid (learner observations)
-  (if (listp (first observations))
-      ;; batch case
-      (mapcar #'register-zero (execute-program (learner-program learner) observations))
-      ;; single observation
-      (register-zero (execute-program (learner-program learner) observations))))
-
+(defun get-bid (learner observations vm-cache)
+  (unless (typep observations '(simple-array double-float (*)))
+    (error "'get-bid' received ~A.~%Expected (SIMPLE-ARRAY DOUBLE-FLOAT (*))." (type-of observations)))
+  (let* ((id (learner-id learner))
+         (vm-program (or (gethash id vm-cache)
+                         (setf (gethash id vm-cache)
+                               (build-vm-program (program-instructions (learner-program learner)))))))
+    (let ((regs (execute-vm-program vm-program observations)))
+      (aref regs 0))))
+  
 (defun get-reference (reference)
   (if (reference-p reference)
       (cadr reference)

@@ -60,11 +60,11 @@
       (let ((next-gen-model (fill-N-offspring survivors parents gap)))
         
         ;; 5. TUNE CONSTANTS (Targeting ONLY the new offspring)
-        (when (tpg-p next-gen-model)
-          (loop for team in (teams next-gen-model)
-                ;; If this team was NOT in our survivor list, it is new. Tune it.
-                unless (member (team-id team) survivor-ids :test #'equal)
-                do (tune-constants-in-team next-gen-model (team-id team) dataset)))
+        ;; (when (tpg-p next-gen-model)
+        ;;   (loop for team in (teams next-gen-model)
+        ;;         ;; If this team was NOT in our survivor list, it is new. Tune it.
+        ;;         unless (member (tem-id team) survivor-ids :test #'equal)
+        ;;         do (tune-constants-in-team next-gen-model (team-id team) dataset)))
         
         ;; Return the model. 
         ;; The survivors are untouched, the offspring are mutated & tuned.

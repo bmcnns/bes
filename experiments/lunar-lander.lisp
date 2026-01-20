@@ -9,22 +9,22 @@
 (defdataset *Minimal-LunarLander-Expert-v3*
   :path "~/.datasets/Minimal-LunarLander-Expert-v3")
 
-(setf *dataset* (batch *LunarLander-Expert-v3* 0 25000))
+(setf *dataset* (batch *lunarlander-expert-v3* 0 16662))
 
 (defexperiment *LunarLander-v3*
-  :batch-size 1000
+  :batch-size 16662
   :instruction-set (ADD SUB MUL DIV SIN COS LOG EXP)
-  :registers (R from 1 to 12) 
+  :registers (R from 1 to 8) 
   :observations (OBS from 1 to 8)
   :output-registers (R from 1 to 3)
   :constant-range '(-10.0 10.0)
-  :objectives (accuracy)
+  :objectives (decaying-accuracy)
   :tournament-size 4
   :num-threads 8
-  :population-size 3
+  :population-size 100
   :generations 10
   :minimum-program-length 1
-  :maximum-program-length 10
+  :maximum-program-length 100
   :observation-probability 0.5
   :constant-probability 0.5
   :mutate-instruction-probability 1.0
@@ -38,7 +38,7 @@
   :maximum-instruction-count 256
   :actions '(0 1 2 3)
   :initial-minimum-number-of-learners 2
-  :initial-maximum-number-of-learners 5
+  :initial-maximum-number-of-learners 2
   :minimum-number-of-learners 2
   :maximum-number-of-learners 10
   :mutate-learner-probability 0.3

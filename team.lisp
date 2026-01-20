@@ -29,9 +29,10 @@
                                                      (visited nil)
                                                      (execution-path nil)
                                                      (learner-table (build-learner-table tpg))
-                                                     (team-table (build-team-table tpg)))
+                                                     (team-table (build-team-table tpg))
+                                                     vm-cache)
   (cond ((member reference visited) (error "Cycle detected during team execution."))
-        ((team-p reference) (execute-team tpg (team-id reference) observation :visited visited :learner-table learner-table :team-table team-table :execution-path execution-path))
+        ((team-p reference) (execute-team tpg (team-id reference) observation :visited visited :learner-table learner-table :team-table team-table :execution-path execution-path :vm-cache vm-cache))
         ((learner-p reference) (let* ((goto-team-id (get-reference (learner-action reference)))
                                       (goto-team (gethash goto-team-id team-table)))
                                  (if (null goto-team)
@@ -39,7 +40,7 @@
                                  (push (learner-id reference) execution-path)
                                  (push goto-team-id execution-path)
                                  (push goto-team-id visited)
-                                 (follow-reference tpg goto-team observation :visited visited :learner-table learner-table :team-table team-table :execution-path execution-path)))
+                                 (follow-reference tpg goto-team observation :visited visited :learner-table learner-table :team-table team-table :execution-path execution-path :vm-cache vm-cache)))
         (t (error "Unexpected route while following reference. ~A~%" reference))))
 
 (defun suggest-action (learner observation)
@@ -53,15 +54,18 @@
                                                (visited nil)
                                                (execution-path (list team-id))
                                                (learner-table (build-learner-table tpg))
-                                               (team-table (build-team-table tpg)))
+                                               (team-table (build-team-table tpg))
+                                               vm-cache)
+  ;; (unless (and team-table learner-table)
+  ;;   (error "Tables dropped during recursion."))
   (let* ((team (gethash team-id team-table))
          (learner-ids (team-learners team))
          (learners (mapcar (lambda (lid) (gethash lid learner-table)) learner-ids))
-         (bids (mapcar (lambda (learner) (get-bid learner observation)) learners)))
+         (bids (mapcar (lambda (learner) (get-bid learner observation vm-cache)) learners)))
     (let ((highest-bidder (elt learners (argmax bids))))
       (if (atomic-p highest-bidder)
           (values (suggest-action highest-bidder observation) (nreverse (push (learner-id highest-bidder) execution-path)))
-          (follow-reference tpg highest-bidder observation :visited visited :learner-table learner-table :team-table team-table :execution-path execution-path)))))
+          (follow-reference tpg highest-bidder observation :visited visited :learner-table learner-table :team-table team-table :execution-path execution-path :vm-cache vm-cache)))))
 
 (defun make-team (&key (attempts 5))
   (let* ((min (experiment-initial-minimum-number-of-learners *experiment*))
@@ -83,8 +87,14 @@
 (defun eval-team (team tpg dataset &key (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
   (let* ((team-id (team-id team))
          (observations (observations dataset))
-         (actions (actions dataset))
-         (predictions (mapcar (lambda (obs) (execute-team tpg team-id obs :learner-table learner-table :team-table team-table)) observations)))
+         (actions (coerce (actions dataset) 'list))
+         ;; creating an empty cache here
+         (vm-cache (make-hash-table :test 'eql))
+         (predictions (loop for obs across observations
+                            collect (execute-team tpg team-id obs
+                                                  :learner-table learner-table
+                                                  :team-table team-table
+                                                  :vm-cache vm-cache))))
     (fitness (cons tpg team) actions predictions learner-table team-table)))
 
 (defun team-complexity (tpg team-id &key (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))

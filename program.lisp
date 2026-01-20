@@ -15,7 +15,7 @@
   "Return a random constant sampled uniformly from the constant range in *EXPERIMENT*."
   (let* ((constant-range (experiment-constant-range *experiment*)))
     (destructuring-bind (lower-bound upper-bound) constant-range
-      (coerce (random-range lower-bound upper-bound) 'double-float))))
+      (random-range lower-bound upper-bound))))
 
 (defun random-register ()
   "Return a randomly selected register from *EXPERIMENT*."
@@ -192,7 +192,7 @@ RESULT can be a list of registers or a batch of list of registers."
 ;;     (error "Tried to execute a program but the thing you're trying to execute~%is not a program. ~A" program))
 ;;   (let ((compiled-program (or (get-cached-program (program-id program))
 ;;                               (set-cached-program (program-id program)
-;;                                     (compile-program (strip-introns (program-instructions program)) :show-all-registers show-all-registers)))))
+;;                                     (compile-program (program-instructions program) :show-all-registers show-all-registers)))))
 ;;     (clamp-registers (funcall compiled-program observations))))
 
 (defun execute-program (program observations &key show-all-registers)
@@ -205,10 +205,16 @@ RESULT can be a list of registers or a batch of list of registers."
    - A batch of inputs (list of lists)
 
    SHOW-ALL-REGISTERS (optional): If true, returns all registers;
-   otherwise, return the output register(s) defined in EXPERIMENT."
+   otherwise, return the output register(s) defined in EXPERIMENT.
+
+   NOTE: This version BYPASSES the cache and always recompiles."
   (unless (program-p program)
     (error "Tried to execute a program but the thing you're trying to execute~%is not a program. ~A" program))
-    (clamp-registers (funcall (compile-program (strip-introns (program-instructions program)) :show-all-registers show-all-registers) observations)))
+  
+  ;; Directly compile without checking or setting the cache
+  (let ((compiled-program (compile-program (program-instructions program) 
+                                           :show-all-registers show-all-registers)))
+    (clamp-registers (funcall compiled-program observations))))
 
 
 (defun eval-program (program dataset)

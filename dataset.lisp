@@ -1,87 +1,100 @@
 (in-package :bes)
 
+(defstruct (dataset (:constructor %make-dataset))
+  ;; Array of Double-Float Arrays
+  (observations (make-array 0) :type (simple-array (simple-array double-float (*)) (*)))
+
+  ;; Array of Actions
+  (actions (make-array 0) :type simple-vector)
+
+  ;; Array of Rewards
+  (rewards (make-array 0 :element-type 'double-float) :type (simple-array double-float (*)))
+
+  ;; Array of Terminations
+  (terminations (make-array 0 :element-type 'bit) :type simple-vector)
+
+  ;; Array of Truncations
+  (truncations (make-array 0 :element-type 'bit) :type simple-vector)
+
+  ;; Metadata
+  (size 0 :type fixnum))
+
+(defun convert-list-to-dataset (raw-list)
+  "Converts a raw list of transitions ((obs act rew term trunc) ..) into a dataset struct."
+  (declare (optimize (speed 3) (safety 1))
+           (type list raw-list))
+  (let* ((count (length raw-list))
+         (obs-arr (make-array count))
+         (act-arr (make-array count))
+         (rew-arr (make-array count :element-type 'double-float))
+         (term-arr (make-array count))
+         (trunc-arr (make-array count)))
+
+    (loop for transition in raw-list
+          for i fixnum from 0
+          do (destructuring-bind (obs act rew term trunc) transition
+               (declare (type list obs))
+               ;; 1. Store observation
+               (setf (aref obs-arr i)
+                     (make-array (length obs)
+                                 :element-type 'double-float
+                                 :initial-contents (mapcar (lambda (x) (coerce x 'double-float)) obs)))
+
+               ;; 2. Store action
+               (setf (aref act-arr i) act)
+
+               ;; 3. Store reward
+               (setf (aref rew-arr i) (coerce rew 'double-float))
+
+               ;; 4. Store flags
+               (setf (aref term-arr i) term)
+               (setf (aref trunc-arr i) trunc)))
+
+    (%make-dataset :observations obs-arr
+                   :actions act-arr
+                   :rewards rew-arr
+                   :terminations term-arr
+                   :truncations trunc-arr
+                   :size count)))
+               
+
+;; Simple Accessors
+(defun observations (ds) (dataset-observations ds))
+(defun actions (ds) (dataset-actions ds))
+(defun rewards (ds) (dataset-rewards ds))
+(defun terminations (ds) (dataset-terminations ds))
+(defun truncations (ds) (dataset-truncations ds))
+
+(defun batch (ds start end)
+  "Returns a NEW dataset struct containing the subset."
+  (declare (type dataset ds)
+           (type fixnum start end))
+  (%make-dataset
+   :observations (subseq (dataset-observations ds) start end)
+   :actions (subseq (dataset-actions ds) start end)
+   :rewards (subseq (dataset-rewards ds) start end)
+   :terminations (subseq (dataset-terminations ds) start end)
+   :truncations (subseq (dataset-truncations ds) start end)
+   :size (- end start)))
+
+(defun sample (ds &key (n (experiment-batch-size *experiment*)))
+  (let ((len (dataset-size ds)))
+    (if (>= n len)
+        ds
+        (let ((start (random (- len n))))
+          (batch ds start (+ start n))))))
+                     
+  
 (defmacro defdataset (name &key path)
   "Define a global variable containing a dataset loaded from 'datasets/<name>'.
-   The dataset file should be a serialized Lisp object readable by 'read'.
-   The NAME symbol will be bound as a global variable.
-
-   Example:
-   (defdataset *Minimal-Hopper-Expert-v5*) => loads 'datasets/Minimal-Hopper-Expert-v5'
-   and binds to *Minimal-Hopper-Expert-v5*"
+   Auto-converts the raw list into a high-performance Structure of Arrays."
   (let* ((dataset-name (string-trim "*" (symbol-name name)))
          (file-name (if path
                         path
                         (concatenate 'string "datasets/" dataset-name))))
     `(defparameter ,name
        (with-open-file (in ,file-name :direction :input)
-         (read in)))))
-
-(defun batch (dataset start end)
-  "Return a subsequence of DATASET from START to END (exclusive).
-   This is syntactic sugar for `(subseq data start end)"
-  (subseq dataset start end))
-
-(defun sample (dataset &key (n (experiment-batch-size *experiment*)))
-  "Sample a batch of transitions from DATASET based on the *EXPERIMENT*'s batch size.
-   If the dataset has fewer elements than the batch size, return the full dataset.
-   Otherwise, return a contiguous random batch of size 'experiment-batch-size'."
-  (let ((batch-size n))
-    (if (>= batch-size (length dataset))
-        dataset
-        (progn
-          (let* ((start (random (- (length dataset) batch-size)))
-                 (end (+ start batch-size)))
-            (batch dataset start end))))))
-
-(defun min-cdr (alist)
-  "Return the minimum CDR value in a list like (((k . v)) ...)."
-  (apply #'min (mapcar (lambda (x) (cdr (car x))) alist)))
-
-(defun action-frequencies (dataset)
-  (loop for action in (experiment-actions *experiment*)
-        collect (frequency-if (actions dataset) (lambda (act) (equal act action)))))
-
-(defun uniform-sample (dataset batch-size)
-  (let* ((table (make-hash-table :test #'equal))
-         (action-freqs (action-frequencies dataset))
-         (action-count (min batch-size (min-cdr action-freqs)))
-         (trajectories '()))
-    (loop for action in (experiment-actions *experiment*)
-          do (setf (gethash action table) 0))
-    (loop for trajectory in (shuffle dataset)
-          when (< (gethash (action trajectory) table) action-count)
-            do (progn
-                 (incf (gethash (action trajectory) table))
-                 (push trajectory trajectories)))
-    trajectories))
-
-(defun observations (transitions)
-  "Return a list of observations from TRANSITIONS.
-   Each element of TRANSITIONS is expected to be a list where the first element is the observations."
-  (mapcar #'car transitions))
-
-(defun action (transition)
-  (cadr transition))
-
-(defun actions (transitions)
-  "Return a list of actions from TRANSITIONS.
-   Each element of TRANSITIONS is expected to be a list where the second element is the action taken."
-  (mapcar #'cadr transitions))
-
-(defun rewards (transitions)
-  "Return a list of rewards from TRANSITIONS.
-   Each element of TRANSITIONS is expected to be a list where the third element is
-   the scalar reward received after the action taken."
-  (mapcar #'caddr transitions))
-
-(defun terminations (transitions)
-  "Return a list of termination flags from TRANSITIONS.
-   Each element of TRANSITIONS is expected to be a list where the fourth element is
-   T/NIL indicating if the episode was terminated."
-  (mapcar #'cadddr transitions))
-
-(defun truncations (transitions)
-  "Return a list of truncation flags from TRANSITIONS.
-   Each element of TRANSITIONS is expected to be a list where the fifth element is
-   T/NIL indicating if the episode was truncated."
-  (mapcar (lambda (x) (car (cddddr x))) transitions))
+         (format t "Loading and converting dataset: ~A...~%" ,file-name)
+         ;; RAW LIST -> FAST STRUCT
+         ;; We read the file, then immediately convert it.
+         (convert-list-to-dataset (read in))))))

@@ -3,28 +3,26 @@
 
 (setf *random-state* (make-random-state t))
 
-(defdataset *LunarLander-Expert-v3*
-  :path "~/.datasets/LunarLander-Expert-v3")
+(defdataset *Balanced-Curated-LunarLander-v3*
+  :path "~/.datasets/Balanced-Curated-LunarLander-v3")
 
-(defdataset *Minimal-LunarLander-Expert-v3*
-  :path "~/.datasets/Minimal-LunarLander-Expert-v3")
-
-(setf *dataset* (batch *lunarlander-expert-v3* 0 16662))
+(defvar *dataset* *balanced-curated-lunarlander-v3*)
+(setf *dataset* *balanced-curated-lunarlander-v3*)
 
 (defexperiment *LunarLander-v3*
-  :batch-size 16662
-  :instruction-set (ADD SUB MUL DIV SIN COS LOG EXP)
+  :batch-size 952
+  :instruction-set (ADD SUB MUL)
   :registers (R from 1 to 8) 
   :observations (OBS from 1 to 8)
   :output-registers (R from 1 to 3)
-  :constant-range '(-10.0 10.0)
-  :objectives (decaying-accuracy)
+  :constant-range '(-10.0d0 10.0d0)
+  :objectives (accuracy)
   :tournament-size 4
   :num-threads 8
   :population-size 100
   :generations 10
-  :minimum-program-length 1
-  :maximum-program-length 100
+  :minimum-program-length 3
+  :maximum-program-length 8
   :observation-probability 0.5
   :constant-probability 0.5
   :mutate-instruction-probability 1.0
@@ -34,18 +32,19 @@
   :add-instruction-probability 1.0
   :remove-instruction-probability 1.0
   :swap-instruction-probability 1.0
+  :tune-constants-probability 0.3
   :constant-mutation-std 1.0
-  :maximum-instruction-count 256
+  :maximum-instruction-count 10
   :actions '(0 1 2 3)
-  :initial-minimum-number-of-learners 2
-  :initial-maximum-number-of-learners 2
+  :initial-minimum-number-of-learners 4
+  :initial-maximum-number-of-learners 4
   :minimum-number-of-learners 2
-  :maximum-number-of-learners 10
+  :maximum-number-of-learners 4
   :mutate-learner-probability 0.3
-  :add-learner-probability 0.7
+  :add-learner-probability 0.70
   :remove-learner-probability 0.7
-  :mutate-learner-program-vs-action-probability 0.66
-  :learner-atomic-action-probability 0.5
+  :mutate-learner-program-vs-action-probability 0.75
+  :learner-atomic-action-probability 1.0
   :mutate-team-probability 1.0)
 
 (defparameter *experiment* *LunarLander-v3*)

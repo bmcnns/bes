@@ -76,13 +76,14 @@
               (case op
                 (:ADD (+ v1 v2))
                 (:SUB (- v1 v2))
-                (:MULT (* v1 v2))
+                (:MUL (* v1 v2))
                 (:DIV (if (zerop v2) 0.0d0 (/ v1 v2)))
                 (:SIN (sin v1))
                 (:COS (cos v1))
                 (:NEG (- v1))
+                (:ABS (abs v1))
                 (:LOG (if (> v1 0.0d0) (log v1) 0.0d0))
-                (t 0.0d0)))))
+                (t (error "Unknown opcode: ~A" op))))))
 
     ;; Returns the regs vector
     regs))

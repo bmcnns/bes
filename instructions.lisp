@@ -48,19 +48,18 @@
 (def-safe-operator safe-div analytic-quotient 2)
 (def-safe-operator safe-sub - 2)
 (def-safe-operator safe-sin sin 1)
+(def-safe-operator safe-abs abs 1)
+(def-safe-operator safe-neg - 1)
 (def-safe-operator safe-cos cos 1)
 (def-safe-operator safe-log protected-log 1)
 (def-safe-operator safe-exp protected-exp 1)
 
 (defparameter *instruction-library*
   '((ADD . (:arity 2 :fn safe-add))
+    (NEG . (:arity 1 :fn safe-neg))
+    (ABS . (:arity 1 :fn safe-abs))
     (MUL . (:arity 2 :fn safe-mul))
-    (DIV . (:arity 2 :fn safe-div))
-    (SUB . (:arity 2 :fn safe-sub))
-    (SIN . (:arity 1 :fn safe-sin))
-    (COS . (:arity 1 :fn safe-cos))
-    (LOG . (:arity 1 :fn safe-log))
-    (EXP . (:arity 1 :fn safe-exp))))
+    (SUB . (:arity 2 :fn safe-sub))))
 
 (defun lookup-instruction (name)
   "Look up instruction metadata by name in *INSTRUCTION-LIBRARY*.

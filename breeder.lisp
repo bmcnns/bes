@@ -58,17 +58,7 @@
 
       ;; 4. VARY (Fill gap with mutated offspring)
       (let ((next-gen-model (fill-N-offspring survivors parents gap)))
-        
-        ;; 5. TUNE CONSTANTS (Targeting ONLY the new offspring)
-        ;; (when (tpg-p next-gen-model)
-        ;;   (loop for team in (teams next-gen-model)
-        ;;         ;; If this team was NOT in our survivor list, it is new. Tune it.
-        ;;         unless (member (tem-id team) survivor-ids :test #'equal)
-        ;;         do (tune-constants-in-team next-gen-model (team-id team) dataset)))
-        
-        ;; Return the model. 
-        ;; The survivors are untouched, the offspring are mutated & tuned.
-        next-gen-model))))
+         (tune-constants next-gen-model *dataset* :generations 20 :sigma 0.1d0)))))
 
 (defvar *num-datapoints-so-far* 0)
 

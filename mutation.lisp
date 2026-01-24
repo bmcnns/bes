@@ -178,6 +178,8 @@
         genotype)))
    
 
+
+
 (defun mutate-program (program)
   "Apply a series of stochastic mutations to GENOTYPE according to the *EXPERIMENT*'s settings.
    Mutation steps include:
@@ -321,10 +323,10 @@
 
 (defun mutate-team (tpg team &key (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
    (maybe-mutate-learner tpg
-                        (maybe-remove-learner tpg
-                                              (maybe-add-learner tpg team :learner-table learner-table :team-table team-table)
-                                              :learner-table learner-table :team-table team-table)
-                        :learner-table learner-table :team-table team-table))
+                         (maybe-remove-learner tpg
+                                               (maybe-add-learner tpg team :learner-table learner-table :team-table team-table)
+                                               :learner-table learner-table :team-table team-table)
+                         :learner-table learner-table :team-table team-table))
 
 (defun maybe-mutate-team (tpg team &key (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
   ;; ask malcolm if teams are always mutated -- or whether some teams are unmutated.
@@ -360,18 +362,22 @@
                  (when (and new-learner
                               (not (gethash (learner-id new-learner) learner-table)))
                      (push new-learner new-learners)))))
-           (remove-dangling-learners `(TPG (LEARNERS ,@(append (learners tpg) (nreverse new-learners)))
-                 (TEAMS ,@(append (teams tpg) (nreverse new-teams)))))))
+           (tune-constants (remove-dangling-learners `(TPG (LEARNERS ,@(append (learners tpg) (nreverse new-learners)))
+                 (TEAMS ,@(append (teams tpg) (nreverse new-teams))))) *dataset*)))
 
         
 (defun mutate (model &optional ids)
   "Given a list of individual IDs mutate them."
   (cond ((tpg-p model)
-         (if ids
-             (mutate-tpg model ids)
-             (mutate-tpg model)))
-        ((linear-gp-p model)
-         (if ids
-             (mutate-linear-gp model ids)
-             (mutate-linear-gp model)))))
+                         (if ids
+                             (mutate-tpg model ids)
+                             (mutate-tpg model)))))
 
+
+(defun fitness-using-constants (dataset learners team tpg x)
+  (clear-cache)
+  (let* ((substitutions (loop for new-learner in (replace-doubles learners x)
+                              for learner in learners
+                              collect (cons learner new-learner)))
+         (sol (sublis substitutions tpg)))
+    (cdaadr (eval-team team sol dataset))))

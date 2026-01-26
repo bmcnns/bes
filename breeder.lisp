@@ -28,7 +28,7 @@
     
     best-candidate))
 
-(defun tournament-breeder (tpg dataset generation)
+(defun tournament-breeder (tpg dataset generation save-file log-file)
   (let* ((population (tpg-teams tpg))
          (pop-size (length population))
          ;; We use a lock to ensure only one thread writes to the hash table at a time
@@ -55,12 +55,18 @@
            (std-dev (standard-deviation scores))
            (new-population (list best-team)))
 
+      (with-open-file (stream log-file
+                              :direction :output
+                              :if-exists :append
+                              :if-does-not-exist :create)
+        (format stream "~A ~,5F~%" generation best-score))
+      
       (format t "~&Gen ~3D | Pop: ~3D | Best: ~8,5F | Std: ~8,5F | New: ~D" 
               generation pop-size best-score std-dev num-immigrants)
       (finish-output)
 
-      (if (zerop (mod generation 100))
-          (save-tpg "~/Desktop/blasting-agent" tpg))
+      (if (zerop (mod generation 50))
+          (save-tpg save-file tpg))
       
       ;; --- STEP 3: IMMIGRATION ---
       (loop repeat num-immigrants do

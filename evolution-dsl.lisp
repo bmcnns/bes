@@ -1,14 +1,16 @@
 (in-package :bes)
 
 (defun evolve (dataset &key (budget 100)
-                         (log-file "scores.dat"))
+                         (log-file "scores.dat")
+                         (save-file "agent.tpg"))
   (let ((tpg (make-tpg)))
     (unwind-protect
          (progn
            (loop for generation from 1 to budget
                  do (progn
-                      (setf tpg (tournament-breeder tpg dataset generation))
+                      (setf tpg (tournament-breeder tpg dataset generation save-file log-file))
                       (when (zerop (mod generation 10))
                         (with-output-to-string (s)
                           (room)))))
+           (save-tpg tpg save-file)
            tpg))))

@@ -49,13 +49,9 @@
   :mutate-team-probability 1.0)
 
 (defparameter *experiment* *LunarLander-v3*)
-(defparameter *results-folder* (format nil "/Users/brycemacinnis/experiments/lunar-lander/~A/" (substitute #\- #\: (timestamp))))
 
-(ensure-directories-exist *results-folder*) 
+(defparameter *filename* (substitute #\- #\: (timestamp)))
 
-(evolve #'breeder *eval-fn*
-        :mode 'tpg
-        :budget 150
-        :log-file (concatenate 'string *results-folder* "scores.dat")
-        :save-file (concatenate 'string *results-folder* "agent.tpg"))
-
+(evolve *balanced-moderate-lunarlander-v3* :budget 1000
+                                           :save-file (format nil "/Users/brycemacinnis/experiments/lunar-lander/~A.tpg" *filename*)
+                                           :log-file (format nil "/Users/brycemacinnis/experiments/lunar-lander/~A" *filename*))

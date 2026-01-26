@@ -15,3 +15,5 @@
 
 (defun get-all-reachable-teams (tpg)
   (tpg-teams tpg))
+
+

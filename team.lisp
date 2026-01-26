@@ -8,34 +8,31 @@
   
 (defun execute-team (team observation vm-cache)
   (declare (optimize (speed 3) (safety 0))
-           ;; Strict type for fast array access
            (type (simple-array double-float (*)) observation))
   
   (let ((learners (team-learners team))
-        ;; Initialize best-bid to -Infinity so the first learner always updates it
         (best-bid sb-ext:double-float-negative-infinity) 
         (best-learner nil))
     (declare (type double-float best-bid))
     
-    ;; 1. Find the winner in one pass (Zero Allocation)
+    ;; 1. Find the winning learner
     (dolist (learner learners)
-      ;; We assume get-bid returns a float. 
-      ;; If get-bid is allocating, we will see it in the next profile.
       (let ((bid (the double-float (get-bid learner observation vm-cache))))
         (when (> bid best-bid)
           (setf best-bid bid)
           (setf best-learner learner))))
     
-    ;; 2. Execute the winner
-    (let ((action (learner-action best-learner)))
+    ;; 2. Determine action and track path
+    (let ((action (learner-action best-learner))
+          (current-id (team-id team)))
       (if (team-p action)
-          ;; Recursive Step: Returns a double-float from the bottom
-          (execute-team action observation vm-cache)
+          ;; Recursive Step: Prepend current-id to the path returned from below
+          (multiple-value-bind (final-action path) 
+              (execute-team action observation vm-cache)
+            (values final-action (cons (learner-id best-learner) path)))
           
-          ;; Base Case: Atomic Action
-          ;; Accuracy expects a float. If action is an integer (index), coerce it.
-          ;; This coerce happens in a register (cvtsi2sd), no consing.
-          action))))
+          ;; Base Case: Return the atomic action and the start of the path list
+          (values action (list (learner-id best-learner)))))))
 
 (defun make-team (&key (attempts 5))
   (let* ((min (experiment-initial-minimum-number-of-learners *experiment*))

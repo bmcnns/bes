@@ -86,21 +86,12 @@
     (and (<= plen (length string))
          (string= prefix (subseq string 0 plen)))))
 
-(defun bernoulli (p)
+(defun coin-flip (p)
   "Return T with probability P, NIL otherwise.
    Simulates a Bernoulli trial with success probability P."
-  (< (random 1.0) p))
-
-(defun weighted-random-choice (choices weights)
-  "Select and return one element from CHOICES with probability proportional to WEIGHTS.
-   CHOICES is a list of elements, WEIGHTS is a list of corresponding numeric weights."
-  (let* ((total (reduce #'+ weights))
-         (r (random total)))
-    (loop for choice in choices
-          for weight in weights
-          for sum = weight then (+ sum weight)
-          when (> sum r)
-            return choice)))
+  (if (<= (random 1.0) p)
+      t
+      nil))
 
 (defun normal (mean std)
   "Return a single float from a Gaussian distribution with given
@@ -115,12 +106,6 @@
   "Return a float array of length N, initialized with zeros."
   (make-array n :element-type 'single-float :initial-element 0.0))
 
-(defun list->vector (lst)
-  "Convert a list of numbers LST into a single-float vector (array)."
-  (make-array (length lst)
-              :element-type 'single-float
-              :initial-contents (mapcar #'(lambda (x) (coerce x 'single-float)) lst)))
-
 (defun argmax (list)
   "Return the index of the largest element in LIST.
 Returns NIL if LIST is empty. Ties go to the first max."
@@ -134,24 +119,6 @@ Returns NIL if LIST is empty. Ties go to the first max."
           (setf best x
                 best-i i))))))
 
-(defun argmin (list)
-  "Return the index of the smallest element in LIST.
-Returns NIL if LIST is empty. Ties go to the first max."
-  (when list
-    (let ((best-i 0)
-          (best   (first list))
-          (i 0))
-      (dolist (x (rest list) best-i)
-        (incf i)
-        (when (< x best)
-          (setf best x
-                best-i i))))))
-
-
-(defun column (matrix index)
-  "Return the column at INDEX from a MATRIX (a list of lists)."
-  (mapcar (lambda (row) (nth index row)) matrix))
-
 (defun clamp (x &optional (min *fp-min*) (max *fp-max*))
   "Clamp X to the range [MIN, MAX]. If X is not a real number, return 0.0"
   (cond
@@ -160,14 +127,6 @@ Returns NIL if LIST is empty. Ties go to the first max."
     ((< x min) min)
     (t x)))
 
-(defmacro mappend (fn list)
-  "Map FN over LIST and append the resulting lists (non-destructive)."
-  `(apply #'append (mapcar ,fn ,list)))
-
-(defun has-duplicates-p (seq &key (test 'equal))
-  (not
-   (equal (length seq)
-          (length (remove-duplicates seq :test test)))))
 
 (defun make-unique-id-generator (prefix)
   "Returns a closure that generates a unique ID
@@ -175,31 +134,6 @@ Returns NIL if LIST is empty. Ties go to the first max."
   (let ((counter 0))
     (lambda ()
       (intern (format nil "~A~D" (string-upcase prefix) (incf counter)) "BES"))))
-
-(defmacro with-population (population threads &body forms)
-  "Execute FORMS on each individual in POPULATION in parallel.
-   THREADS specifies how many threads to use."
-  (let ((pop-var (gensym "POP")))
-    `(let ((,pop-var ,population))
-       (if (> ,threads 1)
-           (progn
-             (unless (find-package 'lparallel)
-               (ql:quickload :lparallel))
-             (setf lparallel:*kernel* (lparallel:make-kernel ,threads))
-             (unwind-protect
-                  (progn
-                    ,@(loop for form in forms
-                            collect
-                            `(setf ,pop-var
-                                   (lparallel:pmap 'list (lambda (individual) ,form) ,pop-var))))
-               (lparallel:end-kernel :wait t)))
-           (progn
-             ,@(loop for form in forms
-                     collect
-                     `(setf ,pop-var
-                            (mapcar (lambda (individual) ,form) ,pop-var)))))
-       ,pop-var)))
-
 
 (defmacro multi-thread (sequence symbol-var num-threads &body forms)
   "Execute FORMS on each individual in POPULATION in parallel.
@@ -233,7 +167,6 @@ Returns NIL if LIST is empty. Ties go to the first max."
     (format stream "~A" model)))
 
 (defun load-model (file-name)
-  (clear-cache)
   (with-open-file (stream file-name
                           :direction :input)
     (read stream)))
@@ -244,12 +177,6 @@ Returns NIL if LIST is empty. Ties go to the first max."
 (defun load-tpg (file-name)
   (load-model file-name))
 
-(defun save-lgp (file-name lgp)
-  (save-model file-name lgp))
-
-(defun load-lgp (file-name)
-  (load-model file-name))
-
 (defun mean (seq)
   (/ (apply #'+ seq) (length seq)))
   
@@ -258,9 +185,3 @@ Returns NIL if LIST is empty. Ties go to the first max."
 
 (defun best-reward (scores)
   (reduce #'min (mapcar #'cdaadr scores)))
-
-
-(defun sha256 (string)
-    (let* ((bytes (ironclad:ascii-string-to-byte-array string))
-            (digest (ironclad:digest-sequence :sha256 bytes)))
-    (ironclad:byte-array-to-hex-string digest)))

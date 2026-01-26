@@ -1,96 +1,78 @@
 (in-package :bes)
 
-(defun select-top-R (fitness-scores &key (R 0.50) (key #'first-objective) (pred #'<))
-  "Given a set of SCORES of (INDIVIDUAL-ID ((OBJ1 .. OBJ1-SCORE)..(OBJN .. OBJN-SCORE)))
-   Return the top R PERCENTAGE of INDIVIDUALs using SCORES sorted by KEY.
-   By default, the KEY is OBJ1-SCORE and the LOWEST VALUES are selected."
-  (let ((n (floor (* R (length fitness-scores)))))
-    (when (and (> R 0) (equal n 0))
-      (incf n))
-    (mapcar #'car (subseq (sort fitness-scores pred :key key) 0 n))))
+(defparameter *TOURNAMENT-SIZE* 3 "Size of the random pool for selection.")
 
-(defun fill-N-offspring (model parents N)
-  (cond
-    ((tpg-p model)
-     (let ((new-learners '())
-           (new-teams '()))
-       ;; fill remaining slots with offspring
-       (loop while (< (length new-teams) N)
-             do (let ((parent (random-choice parents)))
-                  (multiple-value-bind (new-team new-learner)
-                      (mutate-team model parent)
-                    (when new-learner (push new-learner new-learners))
-                    (unless (equal (team-id new-team) (team-id parent))
-                      (push new-team new-teams)))))
+(defun standard-deviation (numbers)
+  "Calculates the population standard deviation of a list of numbers."
+  (let* ((n (length numbers))
+         (mean (/ (reduce #'+ numbers) n)))
+    (if (< n 2)
+        0.0d0
+        (sqrt (/ (reduce #'+ (mapcar (lambda (x) (expt (- x mean) 2)) numbers))
+                 n)))))
 
-       `(TPG (LEARNERS ,@(append (learners model) (nreverse new-learners)))
-             (TEAMS ,@(append (teams model) (nreverse new-teams))))))))
 
-(defun breeder (eval-fn model log-fn dataset)
-  "Thread-safe breeder that preserves Elitism.
-   Cycle: Evaluate -> Select -> Reproduce -> Vary (Offspring Only)."
-  (let* ((population-size (experiment-population-size *experiment*))
-         ;; 1. EVALUATE
-         (scores (funcall eval-fn model)))
+(defun get-tournament-winner (population score-map)
+  "Selects N random teams and returns the one with the lowest score (minimization)."
+  (let* ((tournament-size (experiment-tournament-size *experiment*))
+         (best-candidate nil)
+         (best-score 1.0d9)) ;; Initialize high for minimization
+    
+    (loop repeat tournament-size do
+          (let* ((candidate (random-choice population))
+                 (score (gethash candidate score-map)))
+            ;; If this candidate's score is lower than our current best, update
+            (when (< score best-score)
+              (setf best-score score)
+              (setf best-candidate candidate))))
+    
+    best-candidate))
 
-    ;; 2. SELECT (The Elites)
-    (let* ((survivors (select #'select-top-R model scores))
-           ;; Capture the IDs of the survivors so we know who NOT to touch
-           (survivor-ids (mapcar (lambda (x) 
-                                   (if (tpg-p model) (team-id x) (program-id x)))
-                                 (if (tpg-p model) (teams survivors) (programs survivors))))
-           
-           ;; 3. REPRODUCE (Determine parents from survivors)
-           (parents (cond ((tpg-p model)
-                           (intersection (root-teams model)
-                                         (root-teams survivors)
-                                         :test #'equal))
-                          ((linear-gp-p model)
-                           (programs survivors))))
-           
-           (gap (cond ((tpg-p model)
-                       (- population-size (length (teams survivors))))
-                      ((linear-gp-p model)
-                       (- population-size (length (programs survivors)))))))
+(defun tournament-breeder (tpg dataset generation)
+  (let* ((population (tpg-teams tpg))
+         (pop-size (length population))
+         ;; We use a lock to ensure only one thread writes to the hash table at a time
+         (score-map (make-hash-table :test #'eq))
+         (map-lock (bt:make-lock "score-map-lock"))
+         
+         (num-threads (experiment-num-threads *experiment*))
+         (num-immigrants (floor (* pop-size 0.10)))
+         (num-breeders (- pop-size 1 num-immigrants)))
 
-      ;; Log stats based on the pure selection (before variation)
-      (funcall log-fn scores)
+    ;; --- STEP 1: MULTITHREADED EVALUATION ---
+    ;; We distribute the population across threads.
+    ;; Each thread calculates the score and then safely pushes it to the map.
+    (multi-thread population team num-threads
+      (let ((score (eval-team team dataset)))
+        (bt:with-lock-held (map-lock)
+          (setf (gethash team score-map) score))))
 
-      ;; 4. VARY (Fill gap with mutated offspring)
-      (let ((next-gen-model (fill-N-offspring survivors parents gap)))
-         (tune-constants next-gen-model *dataset* :generations 20 :sigma 0.1d0)))))
+    ;; --- STEP 2: STATISTICS & ELITISM (Single Threaded) ---
+    (let* ((scores (loop for team in population collect (gethash team score-map)))
+           (best-score (apply #'min scores))
+           (best-team (find-if (lambda (team) (= (gethash team score-map) best-score)) 
+                               population))
+           (std-dev (standard-deviation scores))
+           (new-population (list best-team)))
 
-(defvar *num-datapoints-so-far* 0)
+      (format t "~&Gen ~3D | Pop: ~3D | Best: ~8,5F | Std: ~8,5F | New: ~D" 
+              generation pop-size best-score std-dev num-immigrants)
+      (finish-output)
 
-(defun breeder-with-data-tracking (eval-fn model log-fn)
-  "Thread-safe breeder with delayed lucky-break spending (Option B / Python-style flywheel).
-   Returns the next-generation model (TPG or LINEAR-GP)."
-  (let* ((population-size (experiment-population-size *experiment*)))
-    ;; 1. Evaluate current population
-    (multiple-value-bind (scores num-datapoints)
-        (funcall eval-fn model)
+      (if (zerop (mod generation 100))
+          (save-tpg "~/Desktop/blasting-agent" tpg))
+      
+      ;; --- STEP 3: IMMIGRATION ---
+      (loop repeat num-immigrants do
+            (push (make-team) new-population))
 
-      (incf *num-datapoints-so-far* num-datapoints)
+      ;; --- STEP 4: BREEDING ---
+      (loop repeat num-breeders do
+            (let* ((parent (get-tournament-winner population score-map))
+                   (offspring (mutate-team parent tpg)))
+              (push offspring new-population)))
 
-      ;; --- 3. Selection (spend breaks here if applicable) ---
-      (let* ((model-after-selection (select #'select-top-R model scores))
-             ;; 4. Determine parent pool
-             (parents (cond ((tpg-p model)
-                             (intersection (root-teams model)
-                                           (root-teams model-after-selection)
-                                           :test #'equal))
-                            ((linear-gp-p model)
-                             (programs model-after-selection))))
-             ;; 5. Compute how many new individuals are needed
-             (gap (cond ((tpg-p model)
-                         (- population-size (length (teams model-after-selection))))
-                        ((linear-gp-p model)
-                         (- population-size (length (programs model-after-selection)))))))
-
-        ;; --- 6. Log fitness statistics ---
-        (funcall log-fn scores *num-datapoints-so-far*)
-
-        ;; --- 7. Fill population back to full size with mutated offspring ---
-        (let ((new-model (fill-N-offspring model-after-selection parents gap)))
-          ;; --- 8. Return new model (tail call friendly) ---
-          new-model)))))
+      ;; --- STEP 5: UPDATE TPG ---
+      (setf (tpg-teams tpg) new-population)
+      
+      tpg)))

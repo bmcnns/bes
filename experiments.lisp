@@ -48,7 +48,8 @@
   add-learner-probability
   remove-learner-probability
   ;; learner mutation probabilities
-  mutate-learner-program-vs-action-probability
+  mutate-learner-action-probability
+  mutate-learner-program-probability
   learner-atomic-action-probability
   mutate-team-probability)
 

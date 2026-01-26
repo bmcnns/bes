@@ -2,33 +2,10 @@
 
 (defparameter *learner-id-generator* (make-unique-id-generator "L"))
 
-(defun learner-p (form)
-  (and
-   (listp form)
-   (equal (car form) 'LEARNER)
-   (program-p (caddr form))
-   (and
-    (cadddr form)
-    (or
-     (program-p (cadddr form))
-     (listp (cadddr form))
-     (symbolp (cadddr form))
-     (numberp (cadddr form))))))
-
-(defun learner-id (learner)
-  (unless (learner-p learner)
-    (error "LEARNER-ID expects a LEARNER. Got ~A instead.~%" learner))
-  (cadr learner))
-
-(defun learner-program (learner)
-  (unless (learner-p learner)
-    (error "LEARNER-PROGRAM expects a LEARNER. Got ~A instead.~%" learner))
-  (caddr learner))
-
-(defun learner-action (learner)
-  (unless (learner-p learner)
-    (error "LEARNER-ACTION expects a LEARNER. Got ~A instead.~%" learner))
-  (cadddr learner))
+(defstruct learner
+  (id (funcall *learner-id-generator*))
+  (program (make-program))
+  (action (random-action)))
 
 (defun reference-p (form)
   "A reference is a list (GOTO <team-id>) where <team-id> is a symbol or string."
@@ -51,36 +28,11 @@
     (let ((regs (execute-vm-program vm-program observations)))
       (aref regs 0))))
   
+(defun random-action ()
+  (let ((actions (experiment-actions *experiment*)))
+    (random-choice actions)))
+
 (defun get-reference (reference)
   (if (reference-p reference)
       (cadr reference)
       (error "Tried to get a reference of something that is not a reference. ~A~%" reference)))
-
-(defun make-learner ()
-  (let ((actions (experiment-actions *experiment*)))
-    `(LEARNER ,(funcall *learner-id-generator*) ,(make-program) ,(random-choice actions))))
-
-(defun learner-complexity (tpg learner-id &key
-                                            (learner-table (build-learner-table tpg))
-                                            (team-table (build-team-table tpg)))
-  "A LEARNER'S complexity is the complexity of its context program PLUS one-of:
-    0 if the LEARNER's action is discrete.
-    PROGRAM-COMPLEXITY if the LEARNER's action is an action program
-    TEAM-COMPLEXITY if the LEARNER's action is a reference to another team."
-  (let* ((learner (find-learner-by-id tpg learner-id :learner-table learner-table))
-         (context-program (learner-program learner))
-         (action (learner-action learner)))
-    (+ (program-complexity context-program)
-       (cond ((program-p action)
-              (program-complexity action))
-             ((reference-p action)
-              (team-complexity tpg (get-reference action)
-                               :learner-table learner-table :team-table team-table))
-             (t 0)))))
-
-(defun clean-learner (learner)
-  `(LEARNER ,(learner-id learner)
-            ,(remove-introns (learner-program learner))
-            ,(if (program-p (learner-action learner))
-                 (remove-introns  (learner-action learner))
-                 (learner-action learner))))

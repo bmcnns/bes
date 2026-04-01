@@ -12,39 +12,6 @@
          (total (length y-predicted)))
     (- (/ correct total))))
 
-(defun decaying-accuracy (y-truth y-predicted)
-  "Compute NEGATIVE weighted accuracy. 
-   Earlier samples have high weight; later samples decay by e^-4.
-   Returns a value where 0 is perfect."
-  (let* ((total-weight 0.0)
-         (weighted-sum 0.0)
-         (decay-rate (/ 4.0 (length y-predicted)))) ; Spreads the e^-4 decay over the whole set
-    
-    (loop for y1 in y-predicted
-          for y2 in y-truth
-          for ts from 0
-          do (let ((weight (exp (* -1.0 decay-rate ts)))) ; e^(-decay * t)
-               (setf total-weight (+ total-weight weight))
-               (when (eq y1 y2)
-                 (setf weighted-sum (+ weighted-sum weight)))))
-    
-    ;; Return negative weighted average
-    (if (zerop total-weight) 
-        0.0 
-        (- (/ weighted-sum total-weight)))))
-
-(defun cross-entropy (p-truth q-predicted)
-  "Compute Cross-Entropy loss between two Lisp vectors.
-   P-TRUTH: Vector of target probabilities (one-hot or distribution).
-   Q-PREDICTED: Vector of predicted probabilities (softmax output).
-   Returns the scalar loss value."
-  (let ((epsilon 1e-12)  ; Prevent log(0)
-        (sum 0.0))
-    (loop for p across p-truth
-          for q across q-predicted
-          do (setf sum (+ sum (* p (log (+ q epsilon))))))
-    (- sum)))
-
 (defun mean-squared-error (y-truth y-predicted)
   "Compute the Mean Squared Error (MSE) between Y-PREDICTED and Y-TRUTH.
    Handles both flat and batched inputs

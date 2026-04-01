@@ -127,6 +127,43 @@ Returns NIL if LIST is empty. Ties go to the first max."
     ((< x min) min)
     (t x)))
 
+(defparameter *lfarm-hosts*
+	      '(("ds-cmlm-02" 11111)
+		("ds-cmlm-03" 11111)
+		("ds-cmlm-04" 11111)
+		("ds-cmlm-06" 11111)
+		("ds-cmlm-07" 11111)
+		("ds-cmlm-08" 11111)
+		("ds-cmlm-09" 11111)
+		("ds-cmlm-11" 11111)
+		("ds-cmlm-12" 11111)
+		("ds-cmlm-14" 11111)
+		("ds-cmlm-15" 11111)
+		("ds-cmlm-16" 11111)
+		("ds-cmlm-17" 11111)
+		("ds-cmlm-18" 11111)
+		("ds-cmlm-19" 11111)))
+
+(defun ensure-kernel ()
+  (unless (and (boundp 'lfarm:*kernel*)
+	       lfarm:*kernel*)
+    (setf lfarm:*kernel*
+	  (lfarm:make-kernel *lfarm-hosts*)))
+  lfarm:*kernel*)
+		
+(defmacro distribute (sequence symbol-var &body forms)
+  "Execute FORMS on each individual in POPULATION in parallel and distributed across computers."
+  (ensure-kernel)
+  (let ((sequence-var (gensym "SEQ")))
+    `(let ((,sequence-var ,sequence))
+       (progn
+	 (unwind-protect
+	     (progn
+	       ,@(loop for form in forms
+		       collect
+		       `(setf ,sequence-var
+			      (lfarm:pmap 'list (lambda (,symbol-var) ,form) ,sequence-var))))
+	   (lfarm:end-kernel :wait t))))))
 
 (defun make-unique-id-generator (prefix)
   "Returns a closure that generates a unique ID

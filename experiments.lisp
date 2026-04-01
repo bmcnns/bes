@@ -34,7 +34,6 @@
   add-instruction-probability
   remove-instruction-probability
   swap-instruction-probability
-  tune-constants-probability
   constant-mutation-std
   maximum-instruction-count
   ;; tpg parameters

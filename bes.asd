@@ -3,7 +3,7 @@
   :version "0.3"
   :author "Bryce MacInnis"
   :license "GPL-3"
-  :depends-on ("lparallel" "py4cl" "ironclad" "cma-es")
+  :depends-on ("lparallel" "py4cl" "ironclad")
   :components ((:file "package")
                (:file "utils")
                (:file "instructions")
@@ -13,7 +13,6 @@
                (:file "program")
                (:file "vm")
                (:file "mutation")
-               (:file "optimizer")
                (:file "selection")
                (:file "reporter")
                (:file "learner")

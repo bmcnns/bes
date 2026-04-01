@@ -41,13 +41,7 @@
                         `(COMPLEXITY . ,(complexity genotype tpg learner-table team-table))))
     (:mean-squared-error . ,#'(lambda (genotype tpg truth prediction learner-table team-table)
                                 (declare (ignore genotype tpg learner-table team-table))
-                                `(LOSS . ,(mean-squared-error truth prediction))))
-    (:accuracy . ,#'(lambda (genotype tpg truth prediction learner-table team-table)
-                                (declare (ignore genotype tpg learner-table team-table))
-                      `(ACCURACY . ,(accuracy truth prediction))))
-    (:decaying-accuracy . ,#'(lambda (genotype tpg truth prediction learner-table team-table)
-                                (declare (ignore genotype tpg learner-table team-table))
-                                `(ACCURACY . ,(accuracy truth prediction)))))
+                                `(LOSS . ,(mean-squared-error truth prediction)))))
   "The available objectives to optimize in a fitness function.
    This maps between a defined *EXPERIMENT* and the dynamic fitness
    function being generated to lazy evaluate objectives")

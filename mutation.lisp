@@ -1,415 +1,277 @@
 (in-package :bes)
 
-;;; mutation.lisp
-;;; ------------
-;;; This file defines the mutation operations for a genotype
-;;; including both micro-mutations (e.g., mutations at the instruction level), and
-;;; macro-mutations (e.g., mutations at the genotype level).
-;;;
-;;; The design is inspired by Stephen Kelly's Tangled Program Graph implementation.
-;;; Each mutation is applied independently according to experiment-defined probabilities.
+;;; ---------------------------------------------------------------------------
+;;; 1. INSTRUCTION-LEVEL (MICRO) MUTATIONS
+;;; ---------------------------------------------------------------------------
+
+(defun random-gaussian (&optional (mean 0.0) (stddev 1.0))
+  "Generates a random number from a normal distribution using Box-Muller."
+  (let ((u1 (random 1.0))
+        (u2 (random 1.0)))
+    ;; Handle edge case where u1 is 0 to avoid log(0)
+    (loop while (zerop u1) do (setf u1 (random 1.0)))
+    (+ mean (* stddev (sqrt (* -2.0 (log u1))) (cos (* 2.0 pi u2))))))
 
 (defun mutate-dest (dest)
-  "Return a randomly chosen destination register that is *not* DEST.
-   Ensures mutations actually change the genotype."
+  "Return a randomly chosen destination register that is *not* DEST."
   (let* ((registers (experiment-registers *experiment*)))
     (random-choice (remove dest registers))))
 
 (defun mutate-opcode (opcode)
-  "Return a randomly selected opcode with the same arity as OPCODE,
-   excluding OPCODE itself."
+  "Return a randomly selected opcode with the same arity as OPCODE, excluding itself."
   (let* ((arity (lookup-arity opcode))
          (compatible-opcodes (instructions-with-arity arity)))
     (random-choice (remove opcode compatible-opcodes))))
 
 (defun mutate-argument (argument)
-  "Randomly mutate ARGUMENT to either:
-   - A new constant (based on *EXPERIMENT*'s constant probability), or
-   - A new observation variable or register, excluding the original ARGUMENT."
-  (let ((constant-probability (experiment-constant-probability *experiment*))
-        (constant-range (experiment-constant-range *experiment*)))
-    
-    (if (bernoulli constant-probability)
-        (random-range (first constant-range) (first (last constant-range)))
-        (random-choice (remove argument `(,@(experiment-observations *experiment*) ,@(experiment-registers *experiment*)))))))
+  "Mutates an argument. 
+   If targeting a Constant:
+     - If old arg was Constant: 70% Gaussian noise, 30% Reset (new random).
+     - If old arg was Register: Always Reset (new random).
+   If targeting a Register:
+     - Standard switch logic."
+  (let* ((constant-probability (experiment-constant-probability *experiment*))
+         (constant-range (experiment-constant-range *experiment*))
+         (min-val (first constant-range))
+         (max-val (first (last constant-range)))
+         ;; Calculate dynamic sigma (e.g., 10% of the total range) for noise
+         (sigma (* 0.10 (- max-val min-val))))
 
-(defun swap-instructions (genotype)
-  "Randomly swap two instructions in the GENOTYPE."
-  (let* ((i (random (length genotype)))
-        (j (loop for r = (random (length genotype))
-                 until (/= r i)
-                 finally (return r))))
-    (loop for instr in genotype
-          for idx from 0
-          collect (cond
-                    ((= idx i) (nth j genotype))
-                    ((= idx j) (nth i genotype))
-                    (t instr)))))
+    (if (coin-flip constant-probability)
+        ;; CASE: We want a Constant
+        (if (and (numberp argument)      ;; Check if it currently IS a constant
+                 (coin-flip 0.70))       ;; 70% chance to add noise
+            
+            ;; Option A: Gaussian Noise
+            ;; We clamp the result to stay within valid range (optional but safer)
+            (let ((noise (random-gaussian 0.0 sigma)))
+              (max min-val (min max-val (+ argument noise))))
 
-(defun add-instruction (genotype)
-  "Insert a new randomly generated instruction at a random position'
-   in GENOTYPE. The instruction is generated based on *EXPERIMENT*'s configuration.
-   There is *no* check that the genotype will remain under the maximum length.
-   Instead, this check is performed externally in 'maybe-add-instruction'."
-  (let* ((i (random (1+ (length genotype))))
-         (new-instr (random-instruction)))
-    (loop for idx from 0
-          for instr in genotype
-          appending (if (= idx i)
-                        (list new-instr instr)
-                        (list instr))
-          finally (when (= i (length genotype))
-                    (return (append genotype (list new-instr)))))))
+            ;; Option B: Reset (30% chance or if prev arg was not constant)
+            (random-range min-val max-val))
 
-(defun remove-instruction (genotype)
-  "Remove a random instruction from GENOTYPE.
-   There is *no* check that the genotype has more than one instruction.
-   This check is performed externally in 'maybe-remove-instruction."
-  (let* ((i (random (length genotype))))
-    (loop for instr in genotype
-          for idx from 0
-          when (/= idx i)
-            collect instr)))
+        ;; CASE: We want a Register/Observation
+        (random-choice (remove argument `(,@(experiment-observations *experiment*) 
+                                          ,@(experiment-registers *experiment*)))))))
 
-(defun mutate-constant (genotype)
-  "Select a random constant in GENOTYPE and perturb it using Gaussian noise
-   with standard deviation from *EXPERIMENT*. If no constants exists,
-   return the original GENOTYPE unchanged."
-  (let* ((constant-locations (loop for instr in genotype
-                                   for instr-idx from 0
-                                   append (loop for arg in (cddr instr)
-                                                for arg-idx from 2
-                                                when (numberp arg)
-                                                  collect (cons instr-idx arg-idx))))
-         (target (when constant-locations (random-choice constant-locations))))
-    (if (null target)
-        genotype
-        (let* ((std (experiment-constant-mutation-std *experiment*))
-               (instr-idx (car target))
-               (arg-idx (cdr target))
-               (old-instr (nth instr-idx genotype))
-               (old-const (nth arg-idx old-instr))
-               (new-const (normal old-const std))
-               (new-instr
-                 (loop for x in old-instr
-                       for i from 0
-                       collect (if (= i arg-idx) new-const x))))
-          (loop for instr in genotype
-                for i from 0
-                collect (if (= i instr-idx) new-instr instr))))))
-
-(defun mutate-instruction (genotype)
-  "Mutate a randomly chosen instruction in GENOTYPE.
-   The mutation may target:
-   - the destination register
-   - the opcode
-   - or one of the arguments (register, observation, or constant)."
-  (let* ((choice-of-mutation (random-choice '(destination opcode args)))
-         (target (random (length genotype)))
-         (old-instruction (nth target genotype))
-         (new-instruction
-           (cond ((equal choice-of-mutation 'destination)
-                  (loop for x in old-instruction
-                        for i from 0
-                        collect (if (= i 0) (mutate-dest x) x)))
-
-                 ((equal choice-of-mutation 'opcode)
-                  (loop for x in old-instruction
-                        for i from 0
-                        collect (if (= i 1) (mutate-opcode x) x)))
-
-                 ((equal choice-of-mutation 'args)
-                  (let* ((arg-index (random-range 2 (length old-instruction)))
-                         (old-arg (nth arg-index old-instruction))
-                         (new-arg (mutate-argument old-arg)))
-                    (loop for x in old-instruction
-                          for i from 0
-                          collect (if (= i arg-index) new-arg x))))
-
-                 (t (error "Unknown form of mutation ~A~%" choice-of-mutation))))
-         (new-genotype (loop for instruction in genotype
-                             for i from 0
-                             collect (if (= i target) new-instruction instruction))))
-    ;; this is necessary because sometimes the arguments
-    ;; are both mutated and the left argument becomes the right
-    ;; and the right argument becomes the left
-    ;; and it doesn't appear to be a mutation
-    (if (equal new-genotype genotype)
-        (mutate-instruction genotype)
-        new-genotype)))
+(defun mutate-individual-instruction (instr)
+  "The core logic for changing a single instruction's parts."
+  (let ((choice (random-choice '(destination opcode args))))
+    (cond ((eq choice 'destination)
+           (cons (mutate-dest (first instr)) (rest instr)))
+          ((eq choice 'opcode)
+           (list* (first instr) (mutate-opcode (second instr)) (cddr instr)))
+          ((and (eq choice 'args) (> (length instr) 2))
+           (let* ((arg-index (random-range 2 (length instr)))
+                  (new-arg (mutate-argument (nth arg-index instr))))
+             (loop for x in instr for i from 0
+                   collect (if (= i arg-index) new-arg x))))
+          (t (cons (mutate-dest (first instr)) (rest instr))))))
 
 (defun mutate-instructions (genotype)
-  "Apply potential mutations to each instruction in GENOTYPE independently.
-   Each instruction may mutate its destination, opcode, or one of its arguments,
-   chosen uniformly. If no change occurs, the original instruction is retained."
-  (let ((mutated-genotype (mapcar
-                           (lambda (instr)
-                             (if (bernoulli (experiment-mutate-instruction-probability *experiment*))
-                                 (let ((choice-of-mutation (random-choice '(destination opcode args))))
-                                   (cond ((eq choice-of-mutation 'destination)
-                                          (loop for x in instr
-                                                for i from 0
-                                                collect (if (= i 0) (mutate-dest x) x)))
+  "Each instruction has an independent chance to be modified.
+   Returns the new genotype (which might be identical to the old one)."
+  (let ((p (experiment-mutate-instruction-probability *experiment*)))
+    (mapcar (lambda (instr)
+              (if (coin-flip p)
+                  (mutate-individual-instruction instr)
+                  instr))
+            genotype)))
 
-                                         ((eq choice-of-mutation 'opcode)
-                                          (loop for x in instr
-                                                for i from 0
-                                                collect (if (= i 1) (mutate-opcode x) x)))
+;;; ---------------------------------------------------------------------------
+;;; 2. PROGRAM-LEVEL MUTATIONS (MACRO)
+;;; ---------------------------------------------------------------------------
 
-                                         ((eq choice-of-mutation 'args)
-                                          (let* ((arg-index (random-range 2 (length instr)))
-                                                 (old-arg (nth arg-index instr))
-                                                 (new-arg (mutate-argument old-arg)))
-                                            (loop for x in instr
-                                                  for i from 0
-                                                  collect (if (= i arg-index) new-arg x))))
+(defun swap-instructions (genotype)
+  (let* ((len (length genotype))
+         (i (random len))
+         (j (loop for r = (random len) until (/= r i) finally (return r)))
+         (new-genotype (copy-list genotype)))
+    (rotatef (nth i new-genotype) (nth j new-genotype))
+    new-genotype))
 
-                                         (t instr)))
-                                 instr))
-                           genotype)))
-    (if (equal mutated-genotype genotype)
-        (mutate-instructions genotype)
-        mutated-genotype)))
+(defun add-instruction (genotype)
+  (let* ((i (random (1+ (length genotype))))
+         (new-instr (random-instruction)))
+    (append (subseq genotype 0 i) (list new-instr) (subseq genotype i))))
 
-(defun maybe-add-instruction (genotype)
-  "Add a new instruction to GENOTYPE with a probability defined by *EXPERIMENT*.
-   Only adds if the GENOTYPE's instruction count is below the *EXPERIMENT*'s maximum."
-  (let ((add-instruction-probability (experiment-add-instruction-probability *experiment*))
-        (maximum-instruction-count (experiment-maximum-instruction-count *experiment*)))
-    (if (and (bernoulli add-instruction-probability) (< (length genotype) maximum-instruction-count))
-        (add-instruction genotype)
-        genotype)))
+(defun remove-instruction (genotype)
+  (let ((i (random (length genotype))))
+    (append (subseq genotype 0 i) (subseq genotype (1+ i)))))
 
-(defun maybe-remove-instruction (genotype)
-  "Remove a random instruction from GENOTYPE with a probability defined by *EXPERIMENT*.
-   Only removes if more than one instruction is present."
-  (let ((remove-instruction-probability (experiment-remove-instruction-probability *experiment*)))
-    (if (and (bernoulli remove-instruction-probability) (> (length genotype) 1))
-        (remove-instruction genotype)
-        genotype)))
-
-(defun maybe-swap-instructions (genotype)
-  "Swap two instructions in GENOTYPE with a probability defined by *EXPERIMENT*.
-   Only applies if the genotype has more than one instruction."
-  (let ((swap-instruction-probability (experiment-swap-instruction-probability *experiment*)))
-    (if (and (bernoulli swap-instruction-probability) (> (length genotype) 1))
-        (swap-instructions genotype)
-        genotype)))
-
-(defun maybe-mutate-instruction (genotype)
-  "Apply an instruction mutation (destination, opcode, or argument)
-   with a probability defined by *EXPERIMENT*."
-  (let ((mutate-instruction-probability (experiment-mutate-instruction-probability *experiment*)))
-    (if (bernoulli mutate-instruction-probability)
-        (mutate-instruction genotype)
-        genotype)))
-
-(defun maybe-mutate-constant (genotype)
-  "Mutate a constant in GENOTYPE using Gaussian noise, with probability defined by *EXPERIMENT*.
-   Only applies if the GENOTYPE contains a constant."
-  (let ((mutate-constant-probability (experiment-mutate-constant-probability *experiment*)))
-    (if (bernoulli mutate-constant-probability)
-        (mutate-constant genotype)
-        genotype)))
-    
 (defun mutate-program (program)
-  "Apply a series of stochastic mutations to GENOTYPE according to the *EXPERIMENT*'s settings.
-   Mutation steps include:
-    - maybe adding an instruction
-    - maybe removing an instruction
-    - maybe swapping two instructions
-    - maybe mutating an instruction
-    - maybe mutating a constant
-    Uses the `->` macro to thread GENOTYPE through each stage."
+  "Applies stochastic structural changes AND instruction tweaks.
+   GUARANTEE: The output program will ALWAYS be different from the input."
   (destructuring-bind (_ id instructions) program
-    ;; syntactic sugar to have PROGRAM as part of the representation
-    (declare (ignore _))
-    ;; we generate a new id since PROGRAMs are immutable
-    (declare (ignore id))
-    ;; mutated programs
+    (declare (ignore _ id))
     (let ((new-id (funcall *program-id-generator*))
-          (mutated (-> instructions
-                       (maybe-add-instruction)
-                       (maybe-remove-instruction)
-                       (maybe-swap-instructions)
-                       (mutate-instructions)
-                       (maybe-mutate-constant))))
+          (mutated (copy-list instructions))
+          (changed-p nil)) ;; Track if we have made a change yet
+
+      ;; 1. Structural: Maybe Add
+      (when (and (coin-flip (experiment-add-instruction-probability *experiment*))
+                 (< (length mutated) (experiment-maximum-instruction-count *experiment*)))
+        (setf mutated (add-instruction mutated))
+        (setf changed-p t))
+
+      ;; 2. Structural: Maybe Remove
+      (when (and (coin-flip (experiment-remove-instruction-probability *experiment*))
+                 (> (length mutated) (experiment-minimum-program-length *experiment*)))
+        (setf mutated (remove-instruction mutated))
+        (setf changed-p t))
+
+      ;; 3. Structural: Maybe Swap
+      (when (and (coin-flip (experiment-swap-instruction-probability *experiment*))
+                 (> (length mutated) 1))
+        (setf mutated (swap-instructions mutated))
+        (setf changed-p t))
+
+      ;; 4. Micro: Mutate Instructions
+      ;; We check if the result is different to set changed-p
+      (let ((micro-mutated (mutate-instructions mutated)))
+        (unless (equal micro-mutated mutated)
+          (setf mutated micro-mutated)
+          (setf changed-p t)))
+
+      ;; 5. THE IMPACT GUARANTEE
+      ;; If the dice rolls all failed (changed-p is nil), FORCE a mutation.
+      (unless changed-p
+        (let ((target-idx (random (length mutated))))
+          (setf (nth target-idx mutated) 
+                (mutate-individual-instruction (nth target-idx mutated)))))
+
       `(PROGRAM ,new-id ,mutated))))
 
-(defun mutate-learner-action-to-atomic (tpg learner)
-  (declare (ignore tpg))
-  (let* ((new-learner-id (funcall *learner-id-generator*))
-         (all-actions (experiment-actions *experiment*))
-         (available-actions (remove (learner-action learner) all-actions)))
-    (if available-actions
-        `(LEARNER ,new-learner-id ,(learner-program learner) ,(random-choice available-actions))
-        learner)))
+;;; ---------------------------------------------------------------------------
+;;; 3. LEARNER & ACTION MUTATIONS
+;;; ---------------------------------------------------------------------------
 
-(defun mutate-learner-action-program (tpg learner)
-  (declare (ignore tpg))
-  (let* ((new-learner-id (funcall *learner-id-generator*)))
-    `(LEARNER ,new-learner-id ,(learner-program learner) ,(mutate-program (learner-action learner)))))
+(defun leads-to-p (start-team target-team)
+  "Returns T if there is a path from START-TEAM to TARGET-TEAM."
+  (let ((visited (make-hash-table :test #'eq)))
+    (labels ((dfs (current)
+               (cond
+                 ((eq current target-team) t) ;; Found the target!
+                 ((gethash current visited) nil) ;; Already checked this node
+                 (t 
+                  (setf (gethash current visited) t)
+                  ;; Search all children (actions that are Teams)
+                  (some (lambda (learner)
+                          (let ((act (learner-action learner)))
+                            (and (typep act 'team) ;; Check if action is a Team
+                                 (dfs act))))      ;; Recurse
+                        (team-learners current))))))
+      (dfs start-team))))
 
-(defun safe-gotos-from-team (tpg from-id &optional (adj (build-adjacency tpg)))
-  "All team-ids that won't create a cycle if FROM-ID points to them."
-  (remove-if (lambda (tid) (would-create-cycle-p tpg from-id tid adj))
-             (mapcar #'team-id (teams tpg))))
 
-(defun mutate-learner-action-to-reference (tpg learner team)
-  (let* ((new-learner-id (funcall *learner-id-generator*))
-         (team-ids (safe-gotos-from-team tpg (team-id team))))
-    (if team-ids
-        `(LEARNER ,new-learner-id ,(learner-program learner) (GOTO ,(random-choice team-ids)))
-        learner)))
+(defparameter *p-link* 0.5 "Probability of generating a Team pointer action.")
 
-(defun mutate-learner-action (tpg learner team)
-  (let ((atomic-action-probability (experiment-learner-atomic-action-probability *experiment*)))
-    (if (bernoulli atomic-action-probability)
-        (if (program-p (learner-action learner))
-            (mutate-learner-action-program tpg learner)
-            (mutate-learner-action-to-atomic tpg learner))
-        (mutate-learner-action-to-reference tpg learner team))))
+(defun mutate-action (current-action tpg current-team)
+  "Mutates action to either Atomic or Team Pointer. Checks for cycles."
+  (declare (ignore current-action))
+  
+  (if (coin-flip *p-link*)
+      ;; CASE 1: Atomic Action (0, 1, 2...)
+      (random-choice (experiment-actions *experiment*))
+      (random-choice (experiment-actions *experiment*))))
+      
+      ;; ;; CASE 2: Team Pointer
+      ;; (let ((all-teams (tpg-teams tpg))
+      ;;       (candidate nil)
+      ;;       (attempts 0))
+        
+      ;;   ;; Try to find a valid team to point to (Max 10 attempts to avoid hanging)
+      ;;   (loop while (and (< attempts 10) (null candidate)) do
+      ;;     (let ((rand-team (random-choice all-teams)))
+      ;;       (cond
+      ;;         ;; Rule 1: Don't point to yourself
+      ;;         ((eq rand-team current-team) nil)
+              
+      ;;         ;; Rule 2: Don't create a cycle
+      ;;         ;; If rand-team already leads to me, I can't point to it.
+      ;;         ((leads-to-p rand-team current-team) nil)
+              
+      ;;         ;; Valid!
+      ;;         (t (setf candidate rand-team))))
+      ;;     (incf attempts))
+        
+      ;;   ;; Return candidate if found, otherwise fallback to Atomic
+      ;;   (or candidate (random-choice (experiment-actions *experiment*))))))
 
-(defun mutate-learner-program (learner)
-  (let ((new-learner-id (funcall *learner-id-generator*))
-        (program (learner-program learner))
-        (action (learner-action learner)))
-    `(LEARNER ,new-learner-id ,(mutate-program program) ,action)))
 
-;; note - investigate atomic action behaviour
+(defun mutate-learner (learner tpg team)
+  "Creates a new learner by mutating either the program or the action."
+  ;; Note: mutate-program now GUARANTEES a change, so we don't need extra checks here.
+  (if (coin-flip (experiment-mutate-learner-program-probability *experiment*))
+      (make-learner :id (funcall *learner-id-generator*)
+                    :program (mutate-program (learner-program learner))
+                    :action (learner-action learner))
+      (make-learner :id (funcall *learner-id-generator*)
+                    :program (learner-program learner)
+                    :action (mutate-action (learner-action learner) tpg team))))
 
-(defun mutate-learner (tpg team &key (attempts 3) (return-original-learner-id nil) (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
-  (let* ((new-team-id (funcall *team-id-generator*))
-         (learner-ids (team-learners team))
-         (learner-id (random-choice learner-ids))
-         (learner (gethash learner-id learner-table))
-         (mutate-learner-program-vs-action-probability
-           (experiment-mutate-learner-program-vs-action-probability *experiment*))
-         (mutated-learner
-           (if (bernoulli mutate-learner-program-vs-action-probability)
-               (mutate-learner-program learner)
-               (mutate-learner-action tpg learner team)))
-         (mutated-learner-id (learner-id mutated-learner))
-         (mutated-team `(TEAM ,new-team-id ,@(append (remove learner-id learner-ids) (list mutated-learner-id))))
-         (mutated-tpg `(TPG (LEARNERS ,@(append (list mutated-learner) (learners tpg))) (TEAMS ,@(append (list mutated-team) (teams tpg))))))
-    (if (> attempts 0)
-        ;; this got changed from 2 to 1. -- might be worth investigating why we had to do this
-        (if (>= (team-count-unique-atomic-actions mutated-tpg mutated-team :learner-table (build-learner-table mutated-tpg)) 1)
-            (if return-original-learner-id
-                (values mutated-team mutated-learner learner-id)
-                (values mutated-team mutated-learner))
-            (mutate-learner tpg team :attempts (1- attempts) :return-original-learner-id return-original-learner-id))
-        (values team nil))))
+;;; ---------------------------------------------------------------------------
+;;; 4. TEAM-LEVEL (MACRO) MUTATIONS
+;;; ---------------------------------------------------------------------------
 
-(defun add-learner (tpg team
-                  &key (learner-table (build-learner-table tpg))
-                       (team-table (build-team-table tpg)))
-  (let* ((new-team-id (funcall *team-id-generator*))
-         (all-learners (learners tpg))
-         (maximum-learner-count (experiment-maximum-number-of-learners *experiment*)))
-    (if (< (1- (length all-learners)) maximum-learner-count)
-        (let* ((all-learner-ids (mapcar #'learner-id all-learners))
-               (current-ids (team-learners team))
-               (candidates (set-difference all-learner-ids current-ids)))
-          (labels ((pick-valid (remaining)
-                     (when remaining
-                       (let ((candidate (random-choice remaining)))
-                         (if (and (reference-p (learner-action (gethash candidate learner-table)))
-                                  (would-create-cycle-p tpg (team-id team)
-                                                        (get-reference (learner-action (gethash candidate learner-table)))))
-                             ;; cycle → try again
-                             (pick-valid (remove candidate remaining))
-                             candidate)))))
-            (let ((new-learner (pick-valid candidates)))
-              (if new-learner
-                  `(TEAM ,new-team-id ,@(append current-ids (list new-learner)))
-                  team))))
+(defun add-learner (team tpg)
+  "Adds a learner from another team to this team."
+  (let* ((max-learners (experiment-maximum-number-of-learners *experiment*))
+         (current-learners (team-learners team))
+         (all-reachable (get-all-reachable-teams tpg))
+         (potential (set-difference (remove-duplicates 
+                                     (loop for tm in all-reachable append (team-learners tm)))
+                                    current-learners)))
+    (if (and (< (length current-learners) max-learners) potential)
+        (let ((candidate (random-choice potential)))
+          (%make-team :id (funcall *team-id-generator*)
+                      :learners (cons candidate current-learners)))
         team)))
 
-(defun remove-learner (tpg team &key (learner-table (build-learner-table tpg)))
-  ;; Removes a random learner if doing so still leaves at least 2 unique atomic actions
-  (let* ((original-team-id (team-id team))
-         (learners (team-learners team)))
-    (labels ((try-remove (remaining)
-               (when remaining
-                 (let* ((candidate (random-choice remaining))
-                        (new-learners (remove candidate learners)))
-                   (if (>= (team-count-unique-atomic-actions
-                            tpg `(TEAM ,original-team-id ,@new-learners) :learner-table learner-table) 2)
-                       ;; success
-                       `(TEAM ,(funcall *team-id-generator*) ,@new-learners)
-                       ;; failure, try another
-                       (try-remove (remove candidate remaining)))))))
-      (or (try-remove learners)
-          team))))
-
-
-(Defun maybe-add-learner (tpg team &key (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
-  (let ((add-learner-probability (experiment-add-learner-probability *experiment*)))
-    (if (bernoulli add-learner-probability)
-        (add-learner tpg team :learner-table learner-table :team-table team-table)
+(defun remove-learner (team)
+  "Removes a random learner if above minimum size."
+  (let ((learners (team-learners team))
+        (min (experiment-minimum-number-of-learners *experiment*)))
+    (if (> (length learners) min)
+        (%make-team :id (funcall *team-id-generator*)
+                    :learners (remove (random-choice learners) learners))
         team)))
 
-(defun maybe-remove-learner (tpg team &key (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
-  (let ((remove-learner-probability (experiment-remove-learner-probability *experiment*)))
-    (if (bernoulli remove-learner-probability)
-        (remove-learner tpg team :learner-table learner-table)
-        team)))
+(defun mutate-team (team tpg)
+  "The top-level breeder call. 
+   GUARANTEE: This will always return a NEW team with at least one modification."
+  (let ((new-team team)
+        (mutation-occurred-p nil))
 
-(defun maybe-mutate-learner (tpg team &key (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
-  (let ((mutate-learner-probability (experiment-mutate-learner-probability *experiment*)))
-    (if (bernoulli mutate-learner-probability)
-        (mutate-learner tpg team :learner-table learner-table :team-table team-table)
-        (values team nil))))
+    ;; 1. Try Add Learner
+    (when (coin-flip (experiment-add-learner-probability *experiment*))
+      (let ((added (add-learner new-team tpg)))
+        (unless (eq added new-team)
+          (setf new-team added mutation-occurred-p t))))
 
-(defun mutate-team (tpg team &key (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
-  (maybe-mutate-learner tpg (maybe-remove-learner tpg (maybe-add-learner tpg team :learner-table learner-table :team-table team-table) :learner-table learner-table :team-table team-table) :learner-table learner-table :team-table team-table))
+    ;; 2. Try Remove Learner
+    (when (coin-flip (experiment-remove-learner-probability *experiment*))
+      (let ((removed (remove-learner new-team)))
+        (unless (eq removed new-team)
+          (setf new-team removed mutation-occurred-p t))))
 
-(defun maybe-mutate-team (tpg team &key (learner-table (build-learner-table tpg)) (team-table (build-team-table tpg)))
-  ;; ask malcolm if teams are always mutated -- or whether some teams are unmutated.
-  ;; or check stephen's code base first.
-  (let ((mutate-team-probability (experiment-mutate-team-probability *experiment*)))
-    (if (bernoulli mutate-team-probability)
-        (mutate-team tpg team :learner-table learner-table :team-table team-table) 
-        (values team nil))))
+    ;; 3. Try Mutate Learner
+    (when (coin-flip (experiment-mutate-learner-probability *experiment*))
+      (let* ((learners (team-learners new-team))
+             (old-l (random-choice learners))
+             (new-l (mutate-learner old-l tpg team)))
+        (unless (eq old-l new-l)
+          (setf new-team (%make-team :id (funcall *team-id-generator*)
+                                     :learners (substitute new-l old-l learners)))
+          (setf mutation-occurred-p t))))
 
-(defun mutate-linear-gp (lgp &optional (ids (mapcar #'program-id (programs lgp))))
-  (let ((program-table (build-program-table lgp))
-        (new-programs '()))
-    (multi-thread ids id (experiment-num-threads *experiment*)
-      (let* ((program (or (gethash id program-table)
-                          (error "Cannot mutate. Program ID ~A not found in ~A.~%" id lgp)))
-             (new-program (mutate-program program)))
-        (unless (gethash (program-id new-program) program-table)
-          (push new-program new-programs))))
-    `(LINEAR-GP (PROGRAMS ,@(append (programs lgp) (nreverse new-programs))))))
-
-(defun mutate-tpg (tpg &optional (ids (mapcar #'team-id (teams tpg))))
-  (let ((team-table (build-team-table tpg))
-               (learner-table (build-learner-table tpg))
-               (new-learners '())
-               (new-teams '()))
-           (multi-thread ids id (experiment-num-threads *experiment*)
-             (let ((team (or (gethash id team-table)
-                             (error "Cannot mutate. Team ID ~A not found in ~A.~%" id tpg))))
-               (multiple-value-bind (new-team new-learner)
-                   (mutate-team tpg team :learner-table learner-table :team-table team-table)
-                 (unless (gethash (team-id new-team) team-table)
-                     (push new-team new-teams))
-                 (when (and new-learner
-                              (not (gethash (learner-id new-learner) learner-table)))
-                     (push new-learner new-learners)))))
-           (remove-dangling-learners `(TPG (LEARNERS ,@(append (learners tpg) (nreverse new-learners)))
-                 (TEAMS ,@(append (teams tpg) (nreverse new-teams)))))))
-
-(defun mutate (model &optional ids)
-  "Given a list of individual IDs mutate them."
-  (cond ((tpg-p model)
-         (if ids
-             (mutate-tpg model ids)
-             (mutate-tpg model)))
-        ((linear-gp-p model)
-         (if ids
-             (mutate-linear-gp model ids)
-             (mutate-linear-gp model)))))
-
+    ;; 4. IMPACT GUARANTEE
+    ;; If probabilities were low and nothing happened, force a learner mutation.
+    (unless mutation-occurred-p
+      (let* ((learners (team-learners new-team))
+             (old-l (random-choice learners))
+             (new-l (mutate-learner old-l tpg team)))
+        ;; We know mutate-learner GUARANTEES a new ID, so this is safe.
+        (setf new-team (%make-team :id (funcall *team-id-generator*)
+                                   :learners (substitute new-l old-l learners)))))
+    new-team))

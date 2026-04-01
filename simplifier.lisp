@@ -90,6 +90,51 @@
   (clear-cache)
   (break-all-chains (remove-hitch-hikers (prune-tpg (rebuild-tpg tpg (list team-id))) team-id env-name)))
 
-(defun safe-postprocess (tpg team-id env-name)
-  (clear-cache)
-  (break-all-chains (prune-tpg (rebuild-tpg tpg (list team-id)))))
+(defun safe-postprocess (tpg team-id)
+  (rebuild-tpg tpg (list team-id)))
+
+
+(defun strip-introns-from-learner (learner &key (target-registers '(R1)))
+  "Returns a new learner with a program containing only effective instructions."
+  (let* ((program-data (caddr (learner-program learner)))
+         (effective-instructions '())
+         ;; The set of registers whose values we currently care about
+         (needed-registers (make-hash-table)))
+
+    ;; Initialize needed-registers with targets (e.g., R1 or the action-driving reg)
+    (dolist (reg target-registers)
+      (setf (gethash reg needed-registers) t))
+
+    ;; Iterate backwards through the program instructions
+    (dolist (instr (reverse program-data))
+      (destructuring-bind (dst op src1 src2) instr
+        (declare (ignore op))
+        ;; An instruction is effective if it modifies a register we currently need
+        (when (gethash dst needed-registers)
+          (push instr effective-instructions)
+          ;; Since this register is now "defined" by this instruction, 
+          ;; we remove it from the needed list...
+          (remhash dst needed-registers)
+          ;; ...and add the registers used in the calculation to the needed list.
+          (when (and (symbolp src1) (is-register-p src1))
+            (setf (gethash src1 needed-registers) t))
+          (when (and (symbolp src2) (is-register-p src2))
+            (setf (gethash src2 needed-registers) t)))))
+
+    ;; Update the learner with the stripped program
+    (setf (caddr (learner-program learner)) effective-instructions)
+    learner))
+
+(defun is-register-p (sym)
+  "Checks if a symbol is a register (e.g., R1, R2) vs an observation or constant."
+  (let ((name (symbol-name sym)))
+    (and (> (length name) 1)
+         (char= (char name 0) #\R)
+         (every #'digit-char-p (subseq name 1)))))
+
+(defun remove-introns (team &key (target-registers '(R1)))
+  "Maps over all learners in a team to strip their programs."
+  (setf (team-learners team)
+        (mapcar (lambda (l) (strip-introns-from-learner l :target-registers target-registers))
+                (team-learners team)))
+  team)

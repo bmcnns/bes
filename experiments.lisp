@@ -34,6 +34,7 @@
   add-instruction-probability
   remove-instruction-probability
   swap-instruction-probability
+  tune-constants-probability
   constant-mutation-std
   maximum-instruction-count
   ;; tpg parameters
@@ -47,7 +48,8 @@
   add-learner-probability
   remove-learner-probability
   ;; learner mutation probabilities
-  mutate-learner-program-vs-action-probability
+  mutate-learner-action-probability
+  mutate-learner-program-probability
   learner-atomic-action-probability
   mutate-team-probability)
 

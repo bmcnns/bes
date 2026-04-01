@@ -1,9 +1,9 @@
 (asdf:defsystem "bes"
   :description "Bryce Evolution System"
-  :version "0.2"
+  :version "0.3"
   :author "Bryce MacInnis"
   :license "GPL-3"
-  :depends-on ("lparallel" "py4cl" "ironclad")
+  :depends-on ("lparallel" "py4cl" "ironclad" "cma-es")
   :components ((:file "package")
                (:file "utils")
                (:file "instructions")
@@ -11,7 +11,9 @@
                (:file "experiments")
                (:file "fitness")
                (:file "program")
+               (:file "vm")
                (:file "mutation")
+               (:file "optimizer")
                (:file "selection")
                (:file "reporter")
                (:file "learner")

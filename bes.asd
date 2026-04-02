@@ -3,7 +3,7 @@
   :version "0.3"
   :author "Bryce MacInnis"
   :license "GPL-3"
-  :depends-on ("lparallel" "py4cl" "ironclad")
+  :depends-on ("lparallel" "lfarm-client" "py4cl" "ironclad")
   :components ((:file "package")
                (:file "utils")
                (:file "instructions")

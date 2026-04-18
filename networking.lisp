@@ -5,7 +5,8 @@
   "IP address of the emacs client receiving telemetry.")
 
 (defparameter *islands*
-  '(("10.100.202.42" . 1) ;; ds-cmlm-02
+  '(("129.173.22.24" . 0) ;; ds-login2
+    ("10.100.202.42" . 1) ;; ds-cmlm-02
     ("10.100.202.43" . 2) ;; ds-cmlm-03
     ("10.100.202.44" . 3) ;; ds-cmlm-04
     ("10.100.202.46" . 4) ;; ds-cmlm-06
@@ -65,7 +66,7 @@
 
 (defun lookup-island-id-by-ip (ipaddr)
   "Look up the ID of the island by an IP address."
-  (car (assoc ipaddr *islands* :test #'string=)))
+  (cdr (assoc ipaddr *islands* :test #'string=)))
 	  
 (defun lookup-island-ip-by-id (id)
   "Look up the IP address of the island by its ID."
@@ -79,14 +80,14 @@
   (let* ((ip-address (get-local-ip))
 	 (island-id (lookup-island-id-by-ip ip-address)))
     (format t "Server started on ~A:8080.~%" ip-address)
-    (format t "This is island ~A.~%" island-id))
-  
-  ;; Start the telemetry socket
-  (bt:make-thread
-   (lambda ()
-     (loop
-       do (emit-fitness-scores 1 (random 42.0))
-       do (sleep (+ 1 (random 4)))))))
+    (format t "This is island ~A.~%" island-id)
+    
+    ;; Start the telemetry socket
+    (bt:make-thread
+     (lambda ()
+       (loop
+	 do (emit-fitness-scores island-id (random 42.0))
+	 do (sleep (+ 1 (random 4))))))))
 
 (defun get-neighbours (island-id)
   "Returns the island IDs that this island ID is connected to."

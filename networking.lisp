@@ -53,10 +53,9 @@
 (defun emit-fitness-scores (island-id fitness)
   "Sends the island's fitness score to the telemetry client."
   (let ((payload (prin1-to-string
-		  `(:id ,island-id :fitness ,fitness :ts ,(get-universal-time)))))
-    (unwind-protect
-	 (notify-telemetry payload))))
-  
+		  `(:fitness ,fitness :from ,island-id :ts ,(get-universal-time)))))
+    (notify-telemetry payload)))
+
 (defun get-local-ip ()
   "By getting our local IP, we know who we are and who our adjacent neighbours are."
   (let ((socket (usocket:socket-connect "8.8.8.8" 53 :protocol :datagram)))
@@ -72,27 +71,56 @@
   "Look up the IP address of the island by its ID."
   (car (rassoc id *islands* :test #'equal)))
 
+(defun send-migrant (from-id to-id team)
+  "Sends a TEAM from island FROM-ID to island TO-ID through a TCP socket.
+   This also sends telemetry to the emacs client."
+  (let ((receiver-ip-address (lookup-island-ip-by-id to-id))
+	(migrant-id (random 1000))
+	(timestamp (get-universal-time)))
+    ;; ;; Send the migrant to the receiving island over TCP.
+    ;; (usocket:with-client-socket (socket stream receiver-ip-address 8080)
+    ;;   (prin1 `(:migrant :id ,migrant-id
+    ;; 			:from ,from-id
+    ;; 			:ts ,timestamp))
+    ;;   stream)
+    ;; (finish-output stream)
+    ;; Notify the telemetry client that a migrant was sent over UDP.
+    (notify-telemetry
+     (prin1-to-string `(:migrant :id ,migrant-id
+				 :from ,from-id
+				 :to ,to-id
+				 :ts ,timestamp
+				 :status :sent)))))
+
+(defun get-neighbour-ids (island-id)
+  "Returns the island IDs that this island ID is connected to."
+  (cdr (assoc island-id *topology* :test #'equal)))
+
+(defun random-choice (seq)
+  "Returns a random element from the sequence SEQ."
+  (elt seq (random (length seq))))
+
 (defun start-island-server ()
   "The main entry point to starting the island server.
    This will send UDP packets to the emacs client for telemetry.
    This will send and receive TCP packets to other islands for migration.
    This will receive TCP packets from the emacs client to start evolution."
   (let* ((ip-address (get-local-ip))
-	 (island-id (lookup-island-id-by-ip ip-address)))
+	 (island-id (lookup-island-id-by-ip ip-address))
+	 (neighbour-ids (get-neighbour-ids island-id)))
     (format t "Server started on ~A:8080.~%" ip-address)
     (format t "This is island ~A.~%" island-id)
+    (format t "My neighbours are: ~{~A~}" neighbour-ids) 
+    (format t "Their IPs are: ~{~A~}" (mapcar #'lookup-island-ip-by-id neighbour-ids))
     
     ;; Start the telemetry socket
     (bt:make-thread
      (lambda ()
        (loop
 	 do (emit-fitness-scores island-id (random 42.0))
+	 do (send-migrant island-id (random-choice neighbour-ids) nil)
 	 do (sleep (+ 1 (random 4))))))))
 
-(defun get-neighbours (island-id)
-  "Returns the island IDs that this island ID is connected to."
-  (cdr (assoc island-id *topology* :test #'equal)))
-  
 
 
 

@@ -56,6 +56,20 @@
     (unwind-protect
 	 (notify-telemetry payload))))
   
+(defun get-local-ip ()
+  "By getting our local IP, we know who we are and who our adjacent neighbours are."
+  (let ((socket (usocket:socket-connect "8.8.8.8" 53 :protocol :datagram)))
+    (unwind-protect
+	 (format nil "~{~A~^.~}" (coerce (usocket:get-local-address socket) 'list))
+      (usocket:socket-close socket))))
+
+(defun lookup-island-id-by-ip (ipaddr)
+  "Look up the ID of the island by an IP address."
+  (car (assoc ipaddr *islands* :test #'string=)))
+	  
+(defun lookup-island-ip-by-id (id)
+  "Look up the IP address of the island by its ID."
+  (car (rassoc id *islands* :test #'equal)))
 
 (defun start-island-server ()
   "The main entry point to starting the island server.
@@ -73,21 +87,6 @@
      (loop
        do (emit-fitness-scores 1 (random 42.0))
        do (sleep (+ 1 (random 4)))))))
-	  
-(defun lookup-island-id-by-ip (ipaddr)
-  "Look up the ID of the island by an IP address."
-  (car (assoc ipaddr *islands* :test #'string=)))
-
-(defun lookup-island-ip-by-id (id)
-  "Look up the IP address of the island by its ID."
-  (car (rassoc id *islands* :test #'equal)))
-
-(defun get-local-ip ()
-  "By getting our local IP, we know who we are and who our adjacent neighbours are."
-  (let ((socket (usocket:socket-connect "8.8.8.8" 53 :protocol :datagram)))
-    (unwind-protect
-	 (format nil "~{~A~^.~}" (coerce (usocket:get-local-address socket) 'list))
-      (usocket:socket-close socket))))
 
 (defun get-neighbours (island-id)
   "Returns the island IDs that this island ID is connected to."

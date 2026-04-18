@@ -53,7 +53,10 @@
 (defun emit-fitness-scores (island-id fitness)
   "Sends the island's fitness score to the telemetry client."
   (let ((payload (prin1-to-string
-		  `(:fitness ,fitness :from ,island-id :ts ,(get-universal-time)))))
+		  `(:type :fitness
+		    :fitness ,fitness
+		    :from ,island-id
+		    :ts ,(get-universal-time)))))
     (notify-telemetry payload)))
 
 (defun get-local-ip ()
@@ -86,11 +89,11 @@
     ;; (finish-output stream)
     ;; Notify the telemetry client that a migrant was sent over UDP.
     (notify-telemetry
-     (prin1-to-string `(:migrant :id ,migrant-id
-				 :from ,from-id
-				 :to ,to-id
-				 :ts ,timestamp
-				 :status :sent)))))
+     (prin1-to-string `(:type :migrant
+			:from ,from-id
+			:to ,to-id
+			:ts ,timestamp
+			:status :sent)))))
 
 (defun get-neighbour-ids (island-id)
   "Returns the island IDs that this island ID is connected to."

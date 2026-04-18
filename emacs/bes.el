@@ -24,17 +24,7 @@
   "Receive telemetry information from the island nodes."
   (ignore-errors
     (let* ((msg (read string))
-	   (fitness (plist-get msg :FITNESS))
-	   (migrant (plist-get msg :MIGRANT)))
-      (cond
-       (fitness
-	(let ((island (plist-get msg :FROM)))
-	  (puthash island fitness bes-data)))
-       (migrant
-	(let ((from (plist-get msg :FROM))
-	      (to (plist-get msg :TO))
-	      (status (plist-get msg :STATUS)))
-	  (message "Migration from %s to %s: %s." from to status)))))))
+	   (type (plist-get msg :TYPE)))
 
 (defun bes ()
   "Start BES dashboard. Use 'g' to refresh, 's' to sort."

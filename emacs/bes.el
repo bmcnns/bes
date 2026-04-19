@@ -80,7 +80,7 @@
           ;; 1. Move to the end and insert the new log entry
           (goto-char (point-max))
           (insert (format "[%s] %s\n"
-                          (format-time-string "%H:%M:%S")
+                          (format-tim-string "%H:%M:%S")
                           message))
           
           ;; 2. Check line count and trim if necessary

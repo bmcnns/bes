@@ -136,7 +136,7 @@
      (lambda ()
        (loop for generation from 0
 	     do (emit-fitness-scores island-id (random 42.0) generation)
-	     do (when neighbour-ids
+	     do (when (and neighbour-ids (> generation 10))
 		  (send-migrant island-id (random-choice neighbour-ids) 'TEAM-XX))
 	     do (sleep (+ 1 (random 4))))))
 

@@ -115,15 +115,15 @@
     (format t "Server started on ~A:8080.~%" ip-address)
     (format t "This is island ~A.~%" island-id)
     (when neighbour-ids
-      (format t "My neighbours are: ~{~A~}" neighbour-ids) 
-      (format t "Their IPs are: ~{~A~}" (mapcar #'lookup-island-ip-by-id neighbour-ids)))
+      (format t "My neighbours are: ~{~A~^, ~}~%" neighbour-ids) 
+      (format t "Their IPs are: ~{~A~^, ~}~%" (mapcar #'lookup-island-ip-by-id neighbour-ids)))
     ;; Start the telemetry socket
     (bt:make-thread
      (lambda ()
        (loop for generation from 0
 	 do (emit-fitness-scores island-id (random 42.0) generation)
 	 do (when neighbour-ids
-	      send-migrant island-id (random-choice neighbour-ids) nil)
+	      (send-migrant island-id (random-choice neighbour-ids) nil))
 	 do (sleep (+ 1 (random 4))))))))
 
 

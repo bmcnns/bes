@@ -50,12 +50,13 @@
 	 (usocket:socket-send socket msg (length msg))
       (usocket:socket-close socket))))
 			 
-(defun emit-fitness-scores (island-id fitness)
+(defun emit-fitness-scores (island-id fitness generation)
   "Sends the island's fitness score to the telemetry client."
   (let ((payload (prin1-to-string
 		  `(:type :fitness
 		    :fitness ,fitness
 		    :from ,island-id
+		    :generation ,generation
 		    :ts ,(get-universal-time)))))
     (notify-telemetry payload)))
 
@@ -113,15 +114,16 @@
 	 (neighbour-ids (get-neighbour-ids island-id)))
     (format t "Server started on ~A:8080.~%" ip-address)
     (format t "This is island ~A.~%" island-id)
-    (format t "My neighbours are: ~{~A~}" neighbour-ids) 
-    (format t "Their IPs are: ~{~A~}" (mapcar #'lookup-island-ip-by-id neighbour-ids))
-    
+    (when neighbour-ids
+      (format t "My neighbours are: ~{~A~}" neighbour-ids) 
+      (format t "Their IPs are: ~{~A~}" (mapcar #'lookup-island-ip-by-id neighbour-ids)))
     ;; Start the telemetry socket
     (bt:make-thread
      (lambda ()
-       (loop
-	 do (emit-fitness-scores island-id (random 42.0))
-	 do (send-migrant island-id (random-choice neighbour-ids) nil)
+       (loop for generation from 0
+	 do (emit-fitness-scores island-id (random 42.0) generation)
+	 do (when neighbour-ids
+	      send-migrant island-id (random-choice neighbour-ids) nil)
 	 do (sleep (+ 1 (random 4))))))))
 
 

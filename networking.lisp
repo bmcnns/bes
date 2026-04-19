@@ -60,6 +60,17 @@
 		    :ts ,(get-universal-time)))))
     (notify-telemetry payload)))
 
+(defun emit-migration-telemetry (from-id to-id status)
+  "When a migration occurs, send it to the telemetry client's log."
+  (let ((payload (prin1-to-string
+		  `(:type :migrant
+		    :from ,from-id
+		    :to ,to-id
+		    :ts ,(get-universal-time)
+		    :status ,status))))
+    (notify-telemetry payload)))
+			  
+
 (defun get-local-ip ()
   "By getting our local IP, we know who we are and who our adjacent neighbours are."
   (let ((socket (usocket:socket-connect "8.8.8.8" 53 :protocol :datagram)))
@@ -77,24 +88,18 @@
 
 (defun send-migrant (from-id to-id team)
   "Sends a TEAM from island FROM-ID to island TO-ID through a TCP socket.
+
    This also sends telemetry to the emacs client."
-  (let ((receiver-ip-address (lookup-island-ip-by-id to-id))
-	(migrant-id (random 1000))
-	(timestamp (get-universal-time)))
-    ;; ;; Send the migrant to the receiving island over TCP.
-    ;; (usocket:with-client-socket (socket stream receiver-ip-address 8080)
-    ;;   (prin1 `(:migrant :id ,migrant-id
-    ;; 			:from ,from-id
-    ;; 			:ts ,timestamp))
-    ;;   stream)
-    ;; (finish-output stream)
+  (let ((receiver-ip-address (lookup-island-ip-by-id to-id)))
+    ;; Send the migrant to the receiving island over TCP.
+    (usocket:with-client-socket (socket stream receiver-ip-address 8080)
+      (prin1 `(:migrant ,team
+	       :from ,from-id
+	       :ts ,(get-universal-time))
+	     stream)
+      (finish-output stream))
     ;; Notify the telemetry client that a migrant was sent over UDP.
-    (notify-telemetry
-     (prin1-to-string `(:type :migrant
-			:from ,from-id
-			:to ,to-id
-			:ts ,timestamp
-			:status :sent)))))
+    (emit-migration-telemetry from-id to-id :sent)))
 
 (defun get-neighbour-ids (island-id)
   "Returns the island IDs that this island ID is connected to."
@@ -103,6 +108,14 @@
 (defun random-choice (seq)
   "Returns a random element from the sequence SEQ."
   (elt seq (random (length seq))))
+
+(defun handle-incoming-migrant (data island-id)
+  "When a migrant is received from another island, add it to a migrant buffer."
+  (destructuring-bind (&key migrant from ts) data
+    (format t "Received migrant team ~A from island ~A. (Sent at ~A)~%"
+	    migrant from ts)
+    ;; Send telemetry to indicate the migrant was received.
+    (emit-migration-telemetry from island-id :received)))
 
 (defun start-island-server ()
   "The main entry point to starting the island server.
@@ -117,14 +130,26 @@
     (when neighbour-ids
       (format t "My neighbours are: ~{~A~^, ~}~%" neighbour-ids) 
       (format t "Their IPs are: ~{~A~^, ~}~%" (mapcar #'lookup-island-ip-by-id neighbour-ids)))
+
     ;; Start the telemetry socket
     (bt:make-thread
      (lambda ()
        (loop for generation from 0
-	 do (emit-fitness-scores island-id (random 42.0) generation)
-	 do (when neighbour-ids
-	      (send-migrant island-id (random-choice neighbour-ids) nil))
-	 do (sleep (+ 1 (random 4))))))))
+	     do (emit-fitness-scores island-id (random 42.0) generation)
+	     do (when neighbour-ids
+		  (send-migrant island-id (random-choice neighbour-ids) 'TEAM-XX))
+	     do (sleep (+ 1 (random 4))))))
+
+    ;; Start the migrant receiver thread
+    (bt:make-thread
+     (lambda ()
+       (usocket:with-server-socket (server (usocket:socket-listen "0.0.0.0" 8080))
+	 (loop
+	   (usocket:with-connected-socket (client (usocket:socket-accept server))
+	     (let* ((stream (usocket:socket-stream client))
+		    (data (read stream nil :eof)))
+	       (unless (eq data :eof)
+		 (handle-incoming-migrant data island-id))))))))))
 
 
 
@@ -132,4 +157,4 @@
 
 
 
-  
+

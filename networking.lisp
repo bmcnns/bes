@@ -298,8 +298,8 @@
      (lambda ()
        (loop for generation from 0
 	     do (emit-fitness-scores island-id (random 42.0) generation)
-	     do (when (and neighbour-ids (> generation 10))
-		  (send-migrant island-id (random-choice neighbour-ids) 'TEAM-XX))
+	     ;; do (when (and neighbour-ids (> generation 10))
+	     ;; 	  (send-migrant island-id (random-choice neighbour-ids) 'TEAM-XX))
 	     do (sleep (+ 1 (random 4))))))
 
     ;; Start the heartbeat thread over UDP
@@ -318,7 +318,7 @@
 	     (let* ((stream (usocket:socket-stream client))
 		    (msg (read stream nil :eof)))
 	       (unless (eq msg :eof)
-		 (format t "TCP message received.")
+		 (format t "TCP message received. ~A" msg)
 		 ;; Dispatch according to the request received
 		 (case (getf msg :type)
 		   (:migrant (handle-migrant-received msg island-id))

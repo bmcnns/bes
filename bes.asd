@@ -6,5 +6,6 @@
   :depends-on ("usocket" "bordeaux-threads" "lparallel")
   :components ((:file "package")
 	       (:file "globals")
+	       (:file "migration")
                (:file "networking")
 	       (:file "main")))

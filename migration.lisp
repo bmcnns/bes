@@ -1,3 +1,5 @@
+(in-package :bes)
+
 (defun make-migration-buffer ()
   "Encapsulate the migration buffer in a closure."
   (let ((queue '())

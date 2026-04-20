@@ -62,16 +62,6 @@
 		    :ts ,(get-universal-time)))))
     (notify-telemetry payload)))
 
-(defun emit-migration-telemetry (from-id to-id status)
-  "When a migration occurs, send it to the telemetry client's log."
-  (let ((payload (prin1-to-string
-		  `(:type :migrant
-		    :from ,from-id
-		    :to ,to-id
-		    :ts ,(get-universal-time)
-		    :status ,status))))
-    (notify-telemetry payload)))
-
 (defun get-cpu-usage (&optional (interval 1))
   "Returns a single float representing the total CPU utilization (0.0 to 100.0)."
   (flet ((get-raw-cpu ()
@@ -173,7 +163,7 @@
 	     stream)
       (finish-output stream))
     ;; Notify the telemetry client that a migrant was sent over UDP.
-    (emit-migration-telemetry from-id to-id :sent)))
+    (emit-message (format nil "Migrant was sent to island ~A.~%" to-id))))
 
 (defun get-neighbour-ids (island-id)
   "Returns the island IDs that this island ID is connected to."
@@ -183,12 +173,12 @@
   "Returns a random element from the sequence SEQ."
   (elt seq (random (length seq))))
 
-(defun handle-migrant-received (msg island-id)
+(defun handle-migrant-received (msg)
   "When a migrant is received through TCP, push it to the migration buffer.
    Then send a migrant received message to the telemetry client."
   (let ((from (getf msg :from))
 	(team (getf msg :team)))
-    (emit-migration-telemetry from island-id :received)
+    (emit-message (format nil "Migrant was received from island ~A.~%" from))
     (push-migrant team)))
 
 (defun set-global-parameters (num-observations num-actions
@@ -197,7 +187,8 @@
 			      p-add-instr p-del-instr p-swap-instrs
 			      p-mut-constant)
   "Set the hyperparameters according to the TCP request."
-  (setf *num-observations* *num-actions*)
+  (setf *num-observations* num-observations)
+  (setf *num-actions* num-actions)
   (setf *p-add* p-add)
   (setf *p-del* p-del)
   (setf *p-mut* p-mut)
@@ -232,6 +223,11 @@
 			(not (eq dataset-name :none))
 			(eq gym-environment-name :none))))))
 
+(defun who-am-i ()
+  "Returns the island ID of the currently running server."
+  (let ((ip-address (get-local-ip)))
+    (lookup-island-id-by-ip ip-address)))
+
 (defun handle-start-search (msg)
   "When a search is started through TCP, validate that the search parameters
    are valid and then begin the search. This will also send a search started
@@ -257,29 +253,29 @@
 	(p-swap-instrs (getf msg :p-swap-instrs))
 	(p-mut-constant (getf msg :p-mut-constant 0.5))
 	(seed (getf msg :seed)))
-    (format t "START SEARCH REQUEST RECEIVED: ~A~%" msg)))
-    ;; (if (valid-search-parameters-p mode gym-environment-name dataset-name
-    ;; 				   num-observations num-actions population-size
-    ;; 				   init-number-of-learners max-number-of-learners
-    ;; 				   p-add p-del p-mut p-act p-swap gap
-    ;; 				   init-program-size max-program-size
-    ;; 				   p-add-instr p-del-instr p-swap-instrs
-    ;; 				   p-mut-constant seed)
-    ;; 	(progn
-    ;; 	  (set-global-parameters
-    ;; 	                         num-observations num-actions
-    ;; 	                         p-add p-del p-mut p-act
-    ;; 				 p-swap gap init-program-size
-    ;; 				 max-program-size p-add-instr
-    ;; 				 p-del-instr p-swap-instrs
-    ;; 				 p-mut-constant)
-    ;; 	  (emit-message "Search started on island ~A~%")
-    ;; 	  (run-search mode gym-environment-name dataset-name))
-    ;; 	(progn
-    ;; 	  (emit-error "The search parameters provided are invalid.")))))
+    (format t "~S~%" msg)
+    (format t "num-actions: ~A~%" num-actions)
+    (if (valid-search-parameters-p mode gym-environment-name dataset-name
+				   num-observations num-actions population-size
+				   init-number-of-learners max-number-of-learners
+				   p-add p-del p-mut p-act p-swap gap
+				   init-program-size max-program-size
+				   p-add-instr p-del-instr p-swap-instrs
+				   p-mut-constant seed)
+	(progn
+	  (set-global-parameters
+	                         num-observations num-actions
+	                         p-add p-del p-mut p-act
+				 p-swap gap init-program-size
+				 max-program-size p-add-instr
+				 p-del-instr p-swap-instrs
+				 p-mut-constant)
+	  (emit-message (format nil "Search started on island ~A~%" (who-am-i)))
+	  (run-search mode gym-environment-name dataset-name seed))
+	(emit-error "The search parameters provided are invalid."))))
 	  
 				   
-(defun start-island-server ()
+(defun start-server ()
   "The main entry point to starting the island server.
    This will send UDP packets to the emacs client for telemetry.
    This will send and receive TCP packets to other islands for migration.
@@ -318,67 +314,7 @@
 	     (let* ((stream (usocket:socket-stream client))
 		    (msg (read stream nil :eof)))
 	       (unless (eq msg :eof)
-		 (format t "TCP message received. ~A" msg)
 		 ;; Dispatch according to the request received
 		 (case (getf msg :type)
-		   (:migrant (handle-migrant-received msg island-id))
+		   (:migrant (handle-migrant-received msg))
 		   (:start-search (handle-start-search msg))))))))))))
-  
-
-    ;; representation for online search requests
-    ;; (:type :start-search
-    ;;  :ts timestamp
-    ;;  :mode :online
-    ;;  :gym-environment-name "HalfCheetah-v5"
-    ;;  :dataset-name :none
-    ;;  :num-observations 16
-    ;;  :num-actions 6
-    ;;  :population-size 160
-    ;;  :init-number-of-learners 3
-    ;;  :max-number-of-learners :inf
-    ;;  :p-add 0.2
-    ;;  :p-del 0.1
-    ;;  :p-mut 0.5
-    ;;  :p-act 0.2
-    ;;  :p-swap 0.1
-    ;;  :gap 0.5
-    ;;  :init-program-size 100
-    ;;  :max-program-size :inf
-    ;;  :p-add-instr 0.9
-    ;;  :p-del-instr 0.5
-    ;;  :p-swap-instrs 1.0
-    ;;  :p-mut-constant 0.5
-    ;;  :seed 24012000)
-	   
-    ;; ;; representation for offline search requests
-    ;; (:type :start-search
-    ;;  :mode :offline
-    ;;  :gym-environment-name :none
-    ;;  :dataset-name "HalfCheetah-Expert-v5"
-    ;;  :num-observations 16
-    ;;  :num-actions 6
-    ;;  :population-size 1000
-    ;;  :init-number-of-learners 3
-    ;;  :max-number-of-learners :inf
-    ;;  :p-add 0.2
-    ;;  :p-del 0.1
-    ;;  :p-mut 0.5
-    ;;  :p-act 0.2
-    ;;  :p-swap 0.1
-    ;;  :gap 0.5
-    ;;  :init-program-size 100
-    ;;  :max-program-size :inf
-    ;;  :p-add-instr 0.9
-    ;;  :p-del-instr 0.5
-    ;;  :p-swap-instrs 1.0
-    ;;  :p-mut-constant 0.5
-    ;;  :seed 24012000)
-
-
-
-
-
-
-
-
-

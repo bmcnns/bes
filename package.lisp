@@ -4,7 +4,8 @@
 			  #:*kernel*
 			  #:make-kernel
 			  #:pmap
-			  #:end-kernel))
+			  #:end-kernel)
+	    (:export :start-server))
 
 (in-package :bes)
        

@@ -9,6 +9,7 @@
 	       (:file "helpers")
 	       (:file "instruction")
 	       (:file "program")
+	       (:file "dataset")
 	       (:file "migration")
                (:file "networking")
 	       (:file "main")))

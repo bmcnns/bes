@@ -7,6 +7,8 @@
   :components ((:file "package")
 	       (:file "globals")
 	       (:file "helpers")
+	       (:file "instruction")
+	       (:file "program")
 	       (:file "migration")
                (:file "networking")
 	       (:file "main")))

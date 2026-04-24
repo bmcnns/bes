@@ -1,5 +1,14 @@
 (in-package :bes)
 
+(defvar *server-threads* nil
+  "List of threads spawned by START-SERVER.")
+
+(defvar *server-socket* nil
+  "The TCP server socket, stored so STOP-SERVER can stop it.")
+
+(defvar *server-running* nil
+  "When NIL, server loops will exit.")
+
 (defparameter *telemetry-ip* "129.173.22.24"
   "IP address of the emacs client receiving telemetry.")
 
@@ -26,24 +35,22 @@
   "The mapping between IP address and their island ID.")
 
 (defparameter *topology*
-  '((1 . (2 6))
-    (2 . (1 3 7))
-    (3 . (2 4 8))
-    (4 . (3 5 9))
-    (5 . (4 10))
-    (6 . (1 7 11))
+  '((1 . (2 5 6 11))
+    (2 . (1 3 7 12))
+    (3 . (2 4 8 13))
+    (4 . (3 5 9 14))
+    (5 . (1 4 10 15))
+    (6 . (1 7 10 11))
     (7 . (2 6 8 12))
     (8 . (3 7 9 13))
     (9 . (4 8 10 14))
-    (10 . (5 9 15))
-    (11 . (6 12))
-    (12 . (7 11 13))
-    (13 . (12 8 14))
-    (14 . (9 13 15))
-    (15 . (10 14)))
-  "Currently this represents a grid topology with up-to 4 adjacent neighbours.
-   Another topology of interest might be the torus where all islands have 4 adjacent
-  neighbours.")
+    (10 . (5 6 9 15))
+    (11 . (1 6 12 15))
+    (12 . (2 7 11 13))
+    (13 . (3 12 8 14))
+    (14 . (4 9 13 15))
+    (15 . (5 10 11 14)))
+  "This is a 3x5 toroidal grid. Each island has 4 adjacent neighbours wrapping around if necessary.")
 
 (defun notify-telemetry (msg)
   "Fire and forget a message over UDP to the telemetry client."
@@ -169,10 +176,6 @@
   "Returns the island IDs that this island ID is connected to."
   (cdr (assoc island-id *topology* :test #'equal)))
 
-(defun random-choice (seq)
-  "Returns a random element from the sequence SEQ."
-  (elt seq (random (length seq))))
-
 (defun handle-migrant-received (msg)
   "When a migrant is received through TCP, push it to the migration buffer.
    Then send a migrant received message to the telemetry client."
@@ -230,7 +233,7 @@
 
 (defun handle-start-search (msg)
   "When a search is started through TCP, validate that the search parameters
-   are valid and then begin the search. This will also send a search started
+   are valid then begin the search. This will also send a search started
    message to the telemetry client."
   (let ((mode (getf msg :mode))
 	(gym-environment-name (getf msg :gym-environment-name))
@@ -273,13 +276,14 @@
 	  (emit-message (format nil "Search started on island ~A~%" (who-am-i)))
 	  (run-search mode gym-environment-name dataset-name seed))
 	(emit-error "The search parameters provided are invalid."))))
-	  
 				   
 (defun start-server ()
-  "The main entry point to starting the island server.
-   This will send UDP packets to the emacs client for telemetry.
-   This will send and receive TCP packets to other islands for migration.
-   This will receive TCP packets from the emacs client to start evolution."
+  "Start the server for this island."
+  (when *server-running*
+    (format t "Server is already running.~%")
+    (return-from start-server))
+  (setf *server-running* t)
+  (setf *server-threads* nil)
   (let* ((ip-address (get-local-ip))
 	 (island-id (lookup-island-id-by-ip ip-address))
 	 (neighbour-ids (get-neighbour-ids island-id)))
@@ -290,31 +294,56 @@
       (format t "Their IPs are: ~{~A~^, ~}~%" (mapcar #'lookup-island-ip-by-id neighbour-ids)))
 
     ;; Start the telemetry socket over UDP
-    (bt:make-thread
-     (lambda ()
-       (loop for generation from 0
-	     do (emit-fitness-scores island-id (random 42.0) generation)
-	     ;; do (when (and neighbour-ids (> generation 10))
-	     ;; 	  (send-migrant island-id (random-choice neighbour-ids) 'TEAM-XX))
-	     do (sleep (+ 1 (random 4))))))
+    (push (bt:make-thread
+	   (lambda ()
+	     (loop for generation from 0
+		   do (emit-fitness-scores island-id (random 42.0) generation)
+		      ;; do (when (and neighbour-ids (> generation 10))
+		      ;; 	  (send-migrant island-id (random-choice neighbour-ids) 'TEAM-XX))
+		   do (sleep (+ 1 (random 4)))))
+	   :name "telemetry")
+	  *server-threads*)
 
     ;; Start the heartbeat thread over UDP
-    (bt:make-thread
-     (lambda ()
-       (loop
-	 do (emit-heartbeat)
-	 do (sleep *heartbeat-interval*))))
-
+    (push (bt:make-thread
+	   (lambda ()
+	     (loop
+	       do (emit-heartbeat)
+	       do (sleep *heartbeat-interval*)))
+	   :name "heartbeat")
+	  *server-threads*)
+    
     ;; Start listening for commands over TCP
-    (bt:make-thread
-     (lambda ()
-       (usocket:with-server-socket (server (usocket:socket-listen "0.0.0.0" 8080))
-	 (loop
-	   (usocket:with-connected-socket (client (usocket:socket-accept server))
-	     (let* ((stream (usocket:socket-stream client))
-		    (msg (read stream nil :eof)))
-	       (unless (eq msg :eof)
-		 ;; Dispatch according to the request received
-		 (case (getf msg :type)
-		   (:migrant (handle-migrant-received msg))
-		   (:start-search (handle-start-search msg))))))))))))
+    (push (bt:make-thread
+	   (lambda ()
+	     (usocket:with-server-socket (server (usocket:socket-listen "0.0.0.0" 8080))
+	       (loop
+		 (usocket:with-connected-socket (client (usocket:socket-accept server))
+		   (let* ((stream (usocket:socket-stream client))
+			  (msg (read stream nil :eof)))
+		     (unless (eq msg :eof)
+		       ;; Dispatch according to the request received
+		       (case (getf msg :type)
+			 (:migrant (handle-migrant-received msg))
+			 (:start-search (handle-start-search msg)))))))))
+	   :name "tcp-listener")
+	  *server-threads*)))
+
+(defun stop-server ()
+  "Shut down the server gracefully."
+  (setf *server-running* nil)
+
+  ;; Close the TCP listener
+  (when *server-socket*
+    (ignore-errors (usocket:socket-close *server-socket*))
+    (setf *server-socket* nil))
+
+  ;; Give threads a moment to notice then close threads.
+  (sleep 1)
+  (dolist (thread *server-threads*)
+    (when (bt:thread-alive-p thread)
+      (bt:destroy-thread thread)))
+
+  (setf *server-threads* nil)
+  (format t "Server stopped.~%"))
+  

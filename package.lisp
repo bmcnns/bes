@@ -5,7 +5,7 @@
 			  #:make-kernel
 			  #:pmap
 			  #:end-kernel)
-	    (:export :start-server))
+	    (:export :start-server :stop-server))
 
 (in-package :bes)
        

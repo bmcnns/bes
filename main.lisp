@@ -12,4 +12,3 @@
   (let* ((seed (seed-or-random-seed seed))
 	 (*random-state* (sb-ext:seed-random-state seed)))
     (setf *running* t)))
-

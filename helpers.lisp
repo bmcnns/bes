@@ -10,4 +10,9 @@
   (if (or (floatp high) (floatp low))
       (+ low (* (random 1.0) (- high low)))
       (+ low (random (1+ (- high low))))))
-  
+
+(defun coin-flip (p)
+  "Returns T with likelihood p."
+  (if (< (random-range 0.0 1.0) p)
+      t
+      nil))

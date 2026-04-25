@@ -188,7 +188,7 @@
 			      p-add p-del p-mut p-act p-swap
 			      gap init-program-size max-program-size
 			      p-add-instr p-del-instr p-swap-instrs
-			      p-mut-constant)
+			      p-mut-constant p-mut-constant-sign)
   "Set the hyperparameters according to the TCP request."
   (setf *num-observations* num-observations)
   (setf *num-actions* num-actions)
@@ -199,11 +199,14 @@
   (setf *p-swap* p-swap)
   (setf *gap* gap)
   (setf *init-program-size* init-program-size)
-  (setf *max-program-size* max-program-size)
+  (setf *max-program-size* (case max-program-size
+			      (:inf +inf+)
+			      (otherwise max-program-size)))
   (setf *p-add-instr* p-add-instr)
   (setf *p-del-instr* p-del-instr)
   (setf *p-swap-instrs* p-swap-instrs)
-  (setf *p-mut-constant* p-mut-constant))
+  (setf *p-mut-constant* p-mut-constant)
+  (setf *p-mut-constant-sign* p-mut-constant-sign))
 
 (defun valid-search-parameters-p (mode gym-environment-name dataset-name
 				  num-observations num-actions
@@ -212,7 +215,8 @@
 				  p-del p-mut p-act p-swap
 				  gap init-program-size max-program-size
 				  p-add-instr p-del-instr p-swap-instrs
-				  p-mut-constant seed)
+				  p-mut-constant p-mut-constant-sign
+				  seed)
   "Returns T if the search parameters are valid. NIL otherwise."
        ;; 1. Check that mode is either :online or :offline
   (and (or (eq mode :online)
@@ -254,7 +258,8 @@
 	(p-add-instr (getf msg :p-add-instr))
 	(p-del-instr (getf msg :p-del-instr))
 	(p-swap-instrs (getf msg :p-swap-instrs))
-	(p-mut-constant (getf msg :p-mut-constant 0.5))
+	(p-mut-constant (getf msg :p-mut-constant))
+	(p-mut-constant-sign (getf msg :p-mut-constant-sign))
 	(seed (getf msg :seed)))
     (format t "~S~%" msg)
     (format t "num-actions: ~A~%" num-actions)
@@ -264,7 +269,7 @@
 				   p-add p-del p-mut p-act p-swap gap
 				   init-program-size max-program-size
 				   p-add-instr p-del-instr p-swap-instrs
-				   p-mut-constant seed)
+				   p-mut-constant p-mut-constant-sign seed)
 	(progn
 	  (set-global-parameters
 	                         num-observations num-actions
@@ -272,7 +277,7 @@
 				 p-swap gap init-program-size
 				 max-program-size p-add-instr
 				 p-del-instr p-swap-instrs
-				 p-mut-constant)
+				 p-mut-constant p-mut-constant-sign)
 	  (emit-message (format nil "Search started on island ~A~%" (who-am-i)))
 	  (run-search mode gym-environment-name dataset-name seed))
 	(emit-error "The search parameters provided are invalid."))))

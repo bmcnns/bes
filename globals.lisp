@@ -2,6 +2,8 @@
   "The number of registers that a program has access to during execution.
    This is declared as a constant for optimization speed.")
 
+(defconstant +inf+ most-positive-fixnum)
+
 (defvar *running* nil
   "This is enabled when a search is started by a TCP connection
   and disabled when a search is stopped also by a TCP connection.")
@@ -32,7 +34,8 @@
    Recommended value: 0.2")
 
 (defparameter *p-swap*
-  "The probability that a swap of actions occurs between two learners on a team during mutation.
+  "The probability that a swap of actions occurs between two
+   learners on a team during mutation.
    Recommended value: 0.1")
 
 (defparameter *gap*
@@ -52,7 +55,7 @@
    Recommended value: 0.9")
 
 (defparameter *p-del-instr*
-  "The probability that an instruction is removed when mutating a program.
+  "The probability that an instruction is removed when msutating a program.
    Recommended value: 0.5")
 
 (defparameter *p-swap-instrs*
@@ -60,5 +63,12 @@
    Recommended value: 1.0")
 
 (defparameter *p-mut-constant*
-  "Unknown at this time.")
+  "The probability that a constant in a random instruction in a program
+   will be mutated by adding gaussian noise.
+   Recommended value: 0.5")
+
+(defparameter *p-mut-constant-sign*
+  "The probability that when a constant is mutated, its sign will also be
+   flipped at the same time.
+   Recommended value: 0.1")
 

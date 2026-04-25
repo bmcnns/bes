@@ -56,7 +56,6 @@
                       (t 0.0d0)))))))
     registers))
 
-
 (defun pprint-program (program)
   "Transforms a program into a list of symbolic instructions."
   (map 'list #'instruction->sexp (program-instructions program)))

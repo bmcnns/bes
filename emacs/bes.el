@@ -115,6 +115,8 @@
 			(transient-arg-value "*p-swap-instrs=" args)))
 	(p-mut-constant (string-to-number
 			 (transient-arg-value "*p-mut-constant=" args)))
+	(p-mut-constant-sign (string-to-number
+			      (transient-arg-value "*p-mut-constant-sign=" args)))
 	(seed (let ((seed-arg (transient-arg-value "*seed=" args)))
 		(cond
 		 ((string= seed-arg "random")
@@ -142,6 +144,7 @@
       :p-del-instr ,p-del-instr
       :p-swap-instrs ,p-swap-instrs
       :p-mut-constant ,p-mut-constant
+      :p-mut-constant-sign ,p-mut-constant-sign
       :seed ,seed)))
 
 (transient-define-suffix start-search ()
@@ -174,12 +177,13 @@
            "*p-act=0.2"
 	   "*p-swap=0.1"
            "*init-program-size=100"
-           "*max-program-size=1000"
+           "*max-program-size=inf"
            "*gap=0.5"
            "*p-add-instr=0.9"
            "*p-del-instr=0.5"
            "*p-swap-instrs=1.0"
 	   "*p-mut-constant=0.5"
+	   "*p-mut-constant-sign=0.1"
 	   "*env=none"
 	   "*dataset=none"
 	   "*population-size=160"
@@ -219,7 +223,8 @@
    ("-A" "Add Instruction (p)"  "*p-add-instr=")
    ("-D" "Delete Instruction (p)" "*p-del-instr=")
    ("-S" "Swap Instructions (p)" "*p-swap-instrs=")
-   ("-C" "Mutate Constant (p)" "*p-mut-constant=")]
+   ("-C" "Mutate Constant (p)" "*p-mut-constant=")
+   ("-V" "Mutate Constant Sign (p)" "*p-mut-constant-sign=")]
 
   ["Actions"
    ("S" "START Search" start-search)

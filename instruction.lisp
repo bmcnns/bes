@@ -14,6 +14,11 @@
     (:reg (random-register))
     (:obs (random-observation))))
 
+(defun random-constant ()
+  "Returns a random constant in the range of [-10.0, 10.0]"
+  (random-range -10.0 10.0))
+
+
 (defun random-argument-or-constant ()
   "Returns either a random register, a random observation, or a random constant."
   (case (random-choice '(:arg
@@ -84,3 +89,9 @@
 	  (list dest op arg1)
 	  (list dest op arg1 arg2)))))
 
+(defun instruction-has-constant-p (instr)
+  "Returns T the instruction has a constant."
+  (and (> (instruction-arity instr) 1)
+       (or (eq (instruction-src1-type instr) :const)
+	   (eq (instruction-src2-type instr) :const))))
+    

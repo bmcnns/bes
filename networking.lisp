@@ -63,7 +63,7 @@
   "Sends the island's fitness score to the telemetry client."
   (let ((payload (prin1-to-string
 		  `(:type :fitness
-		    :fitness ,fitness
+		    :fitness ,(format nil "~,4F" fitness)
 		    :from ,island-id
 		    :generation ,generation
 		    :ts ,(get-universal-time)))))

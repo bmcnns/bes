@@ -84,7 +84,7 @@
 
     (setf *teams* nil)
     (setf *running* t)
-    (setf *generation* 0)
+    (setf *generation* 1)
     
     ;; enable multi-threading
     (setf lparallel:*kernel* (make-kernel +num-threads+))

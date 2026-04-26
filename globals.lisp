@@ -1,8 +1,7 @@
 (in-package :bes)
 
-(defconstant +num-threads+ 50
-  "The number of CPU cores available for multi-threading.
-   10 cores are left untouched for the OS, telemetry, and networking layer.")
+(defconstant +num-threads+ 160
+  "The number of CPU cores available for multi-threading.")
 
 (defconstant +num-registers+ 8
   "The number of registers that a program has access to during execution.

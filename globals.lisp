@@ -9,7 +9,7 @@
 
 (defconstant +inf+ most-positive-fixnum)
 
-(defvar *running* 
+(defvar *running* nil
   "This is enabled when a search is started by a TCP connection
   and disabled when a search is stopped also by a TCP connection.")
 

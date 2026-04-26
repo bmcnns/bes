@@ -18,7 +18,6 @@
   "Returns a random constant in the range of [-10.0, 10.0]"
   (random-range -10.0 10.0))
 
-
 (defun random-argument-or-constant ()
   "Returns either a random register, a random observation, or a random constant."
   (case (random-choice '(:arg
@@ -50,7 +49,7 @@
             (:constructor make-instruction
              (&aux
               ;; 1. Generate the opcode and arity
-              (op (random-choice '(:ADD :SUB :MUL :DIV :SIN :COS :NEG :ABS :LOG)))
+              (op (random-choice '(:ADD :SUB :MUL )))
               (arity (opcode-arity op))
               ;; 2. Generate destination index directly
               (dest (truncate (nth-value 1 (decode-symbol (random-register)))))

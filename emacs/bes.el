@@ -87,10 +87,10 @@
 		      (transient-arg-value "*num-actions=" args)))
         (population-size (string-to-number
 	 		  (transient-arg-value "*population-size=" args)))
-        (init-number-of-learners (string-to-number
-	 			  (transient-arg-value "*init-number-of-learners=" args)))
-        (max-number-of-learners (string-to-number-or-inf
-	 			 (transient-arg-value "*max-number-of-learners=" args)))
+	(init-num-learners (string-to-number
+			    (transient-arg-value "*init-num-learners=" args)))
+	(max-num-learners (string-to-number-or-inf
+			   (transient-arg-value "*max-num-learners=" args)))
 	(p-add (string-to-number
 		(transient-arg-value "*p-add=" args)))
 	(p-del (string-to-number
@@ -103,7 +103,7 @@
 	 	 (transient-arg-value "*p-swap=" args)))
 	(gap (string-to-number
 	      (transient-arg-value "*gap=" args)))
-        (init-program-size (string-to-number
+        (init-program-size (string-to-number-or-inf
 	 		    (transient-arg-value "*init-program-size=" args)))
 	(max-program-size (string-to-number-or-inf
 	 		   (transient-arg-value "*max-program-size=" args)))
@@ -130,8 +130,8 @@
       :num-observations ,num-observations
       :num-actions ,num-actions
       :population-size ,population-size
-      :init-number-of-learners ,init-number-of-learners
-      :max-number-of-learners ,max-number-of-learners
+      :init-num-learners ,init-num-learners
+      :max-num-learners ,max-num-learners
       :p-add ,p-add
       :p-del ,p-del
       :p-mut ,p-mut
@@ -187,8 +187,8 @@
 	   "*env=none"
 	   "*dataset=none"
 	   "*population-size=160"
-	   "*init-number-of-learners=3"
-	   "*max-number-of-learners=inf"
+	   "*init-num-learners=3"
+	   "*max-num-learners=inf"
 	   "*seed=random")
   ["Island"
     ("-I" "Island" "--island="
@@ -206,8 +206,8 @@
    ("-g" "Gap" "*gap=")
    ("-s" "Seed" "*seed=")]
   [:description "Team Constraints"
-   ("-l" "Initial Number of Learners" "*init-number-of-learners=")
-   ("-L" "Maximum Number of Learners" "*max-number-of-learners=")]
+   ("-l" "Initial Number of Learners" "*init-num-learners=")
+   ("-L" "Maximum Number of Learners" "*max-num-learners=")]
   [:description "Team Mutation Probabilities"
    ("-a" "Add Learner (p)"      "*p-add=")
    ("-d" "Delete Learner (p)"   "*p-del=")

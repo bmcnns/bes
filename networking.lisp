@@ -185,6 +185,7 @@
     (push-migrant team)))
 
 (defun set-global-parameters (num-observations num-actions
+			      init-num-learners max-num-learners
 			      p-add p-del p-mut p-act p-swap
 			      gap init-program-size max-program-size
 			      p-add-instr p-del-instr p-swap-instrs
@@ -192,6 +193,10 @@
   "Set the hyperparameters according to the TCP request."
   (setf *num-observations* num-observations)
   (setf *num-actions* num-actions)
+  (setf *init-num-learners* init-num-learners)
+  (setf *max-num-learners* (case max-num-learners
+			     (:inf +inf+)
+			     (otherwise max-num-learners)))
   (setf *p-add* p-add)
   (setf *p-del* p-del)
   (setf *p-mut* p-mut)
@@ -210,8 +215,8 @@
 
 (defun valid-search-parameters-p (mode gym-environment-name dataset-name
 				  num-observations num-actions
-				  population-size init-number-of-learners
-				  max-number-of-learners p-add
+				  population-size init-num-learners
+				  max-num-learners p-add
 				  p-del p-mut p-act p-swap
 				  gap init-program-size max-program-size
 				  p-add-instr p-del-instr p-swap-instrs
@@ -245,8 +250,8 @@
 	(num-observations (getf msg :num-observations))
 	(num-actions (getf msg :num-actions))
 	(population-size (getf msg :population-size))
-	(init-number-of-learners (getf msg :init-number-of-learners))
-	(max-number-of-learners (getf msg :max-number-of-learners))
+	(init-num-learners (getf msg :init-num-learners))
+	(max-num-learners (getf msg :max-num-learners))
 	(p-add (getf msg :p-add))
 	(p-del (getf msg :p-del))
 	(p-mut (getf msg :p-mut))
@@ -262,22 +267,22 @@
 	(p-mut-constant-sign (getf msg :p-mut-constant-sign))
 	(seed (getf msg :seed)))
     (format t "~S~%" msg)
-    (format t "num-actions: ~A~%" num-actions)
     (if (valid-search-parameters-p mode gym-environment-name dataset-name
 				   num-observations num-actions population-size
-				   init-number-of-learners max-number-of-learners
+				   init-num-learners max-num-learners
 				   p-add p-del p-mut p-act p-swap gap
 				   init-program-size max-program-size
 				   p-add-instr p-del-instr p-swap-instrs
 				   p-mut-constant p-mut-constant-sign seed)
 	(progn
 	  (set-global-parameters
-	                         num-observations num-actions
-	                         p-add p-del p-mut p-act
-				 p-swap gap init-program-size
-				 max-program-size p-add-instr
-				 p-del-instr p-swap-instrs
-				 p-mut-constant p-mut-constant-sign)
+	    num-observations num-actions
+	    init-num-learners max-num-learners
+	    p-add p-del p-mut p-act
+	    p-swap gap init-program-size
+	    max-program-size p-add-instr
+	    p-del-instr p-swap-instrs
+	    p-mut-constant p-mut-constant-sign)
 	  (emit-message (format nil "Search started on island ~A~%" (who-am-i)))
 	  (run-search mode gym-environment-name dataset-name seed))
 	(emit-error "The search parameters provided are invalid."))))

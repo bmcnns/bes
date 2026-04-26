@@ -65,4 +65,7 @@
   (print-unreadable-object (p stream :type t :identity t)
     (format stream "~%~{ ~A~%~}" (pprint-program p))))
 
-
+(defun clone-program (program)
+  "Deep-copies a program."
+  (make-program
+   :instructions (alexandria:copy-array (program-instructions program))))

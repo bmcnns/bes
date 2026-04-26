@@ -78,14 +78,23 @@
 	(let ((start (random (- len num-transitions))))
 	  (batch dataset start (+ start num-transitions))))))
 
+(defun load-dataset (name &key path)
+  "Load a dataset from a path on the filesystem.
+   If a path is not specified, assume '~/.datasets/'"
+  (let* ((dataset-name name)
+	 (file-name (if path
+		       path
+		       (concatenate 'string "~/.datasets/" dataset-name))))
+    (with-open-file (in file-name :direction :input)
+      (format t "Loading and converting dataset: ~A...~%" file-name)
+      (convert-list-to-dataset (read in)))))
+
 (defmacro defdataset (name &key path)
   "Define a global variable containing a dataset loaded from 'datasets/<name>'."
   (let* ((dataset-name (string-trim "*" (symbol-name name)))
 	 (file-name (if path
 			path
-			(concatenate 'string "datasets/" dataset-name))))
+			(concatenate 'string "~/.datasets/" dataset-name))))
     `(defparameter ,name
-       (with-open-file (in ,file-name :direction :input)
-	 (format t "Loading and converting dataset: ~A...~%" ,file-name)
-	 (convert-list-to-dataset (read in))))))
-  
+       (load-dataset ,dataset-name :path ,file-name))))
+         

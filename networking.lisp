@@ -184,13 +184,15 @@
     (emit-message (format nil "Migrant was received from island ~A.~%" from))
     (push-migrant team)))
 
-(defun set-global-parameters (num-observations num-actions
+(defun set-global-parameters (population-size
+			      num-observations num-actions
 			      init-num-learners max-num-learners
 			      p-add p-del p-mut p-act p-swap
 			      gap init-program-size max-program-size
 			      p-add-instr p-del-instr p-swap-instrs
 			      p-mut-constant p-mut-constant-sign)
   "Set the hyperparameters according to the TCP request."
+  (setf *population-size* population-size)
   (setf *num-observations* num-observations)
   (setf *num-actions* num-actions)
   (setf *init-num-learners* init-num-learners)
@@ -244,6 +246,9 @@
   "When a search is started through TCP, validate that the search parameters
    are valid then begin the search. This will also send a search started
    message to the telemetry client."
+  (when *running*
+    (emit-error "A search is already running on this node.")
+    (return-from handle-start-search))
   (let ((mode (getf msg :mode))
 	(gym-environment-name (getf msg :gym-environment-name))
 	(dataset-name (getf msg :dataset-name))
@@ -276,6 +281,7 @@
 				   p-mut-constant p-mut-constant-sign seed)
 	(progn
 	  (set-global-parameters
+	    population-size
 	    num-observations num-actions
 	    init-num-learners max-num-learners
 	    p-add p-del p-mut p-act
@@ -286,6 +292,14 @@
 	  (emit-message (format nil "Search started on island ~A~%" (who-am-i)))
 	  (run-search mode gym-environment-name dataset-name seed))
 	(emit-error "The search parameters provided are invalid."))))
+
+(defun handle-stop-search ()
+  "When a request is received to stop a running search, set *running* to NIL."
+  (unless *running*
+    (emit-error "There is no search currently running on this node to stop.")
+    (return-from handle-stop-search))
+  (emit-message (format nil "Search stopped on island ~A~%" (who-am-i)))
+  (setf *running* nil))
 				   
 (defun start-server ()
   "Start the server for this island."
@@ -302,17 +316,6 @@
     (when neighbour-ids
       (format t "My neighbours are: ~{~A~^, ~}~%" neighbour-ids) 
       (format t "Their IPs are: ~{~A~^, ~}~%" (mapcar #'lookup-island-ip-by-id neighbour-ids)))
-
-    ;; Start the telemetry socket over UDP
-    (push (bt:make-thread
-	   (lambda ()
-	     (loop for generation from 0
-		   do (emit-fitness-scores island-id (random 42.0) generation)
-		      ;; do (when (and neighbour-ids (> generation 10))
-		      ;; 	  (send-migrant island-id (random-choice neighbour-ids) 'TEAM-XX))
-		   do (sleep (+ 1 (random 4)))))
-	   :name "telemetry")
-	  *server-threads*)
 
     ;; Start the heartbeat thread over UDP
     (push (bt:make-thread
@@ -333,15 +336,17 @@
 			  (msg (read stream nil :eof)))
 		     (unless (eq msg :eof)
 		       ;; Dispatch according to the request received
-		       (case (getf msg :type)
+		       (ecase (getf msg :type)
 			 (:migrant (handle-migrant-received msg))
-			 (:start-search (handle-start-search msg)))))))))
+			 (:start-search (handle-start-search msg))
+	                 (:stop-search (handle-stop-search)))))))))
 	   :name "tcp-listener")
 	  *server-threads*)))
 
 (defun stop-server ()
   "Shut down the server gracefully."
   (setf *server-running* nil)
+  (setf *running* nil)
 
   ;; Close the TCP listener
   (when *server-socket*

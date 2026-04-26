@@ -1,4 +1,6 @@
-(defconstant +num-threads+ 150
+(in-package :bes)
+
+(defconstant +num-threads+ 50
   "The number of CPU cores available for multi-threading.
    10 cores are left untouched for the OS, telemetry, and networking layer.")
 
@@ -11,6 +13,9 @@
 (defvar *running* 
   "This is enabled when a search is started by a TCP connection
   and disabled when a search is stopped also by a TCP connection.")
+
+(defvar *generation* 1
+  "Generation counter.")
 
 (defparameter *population-size* 
   "The number of candidate solutions at any given time.")
@@ -84,5 +89,10 @@
    flipped at the same time.
    Recommended value: 0.1")
 
-(defvar *teams* 
+(defvar *teams* nil
   "The team population for this island.")
+
+(defvar *fitness-fn*
+  "The fitness function wrapped in a closure that
+   is made according to whether the mode is set to
+   online or offline.")

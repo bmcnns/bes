@@ -167,6 +167,35 @@
       (process-send-eof proc)
       proc)))
 
+(transient-define-suffix stop-search ()
+  (interactive)
+  (let* ((args (transient-args 'stop-search-menu))
+	 (island-id (string-to-number (transient-arg-value "--island=" args)))
+	 (ip-address (lookup-ip-by-island-id island-id))
+	 (payload '(:type :stop-search)))
+    (message "[LOCAL] Sending stop-search request to island %s at IP address %s." island-id ip-address)
+    (message "%s" payload)
+    (let ((proc (make-network-process
+		 :name "stop-search-tcp-client"
+		 :host ip-address
+		 :service 8080
+		 :family 'ipv4
+		 :nowait nil
+		 :sentinel (lambda (proc event)
+			     (message "TCP Event: %s" event)))))
+      (process-send-string proc (format "%S\n" payload))
+      (process-send-eof proc)
+      proc)))
+	    
+(transient-define-prefix stop-search-menu ()
+  "Menu for stopping searches."
+  ["Island"
+   ("-I" "Island" "--island="
+    :choices ("0" "1" "2" "3" "4" "5" "6" "7" "8" "9" "10" "11" "12" "13" "14" "15"))]
+  ["Actions"
+   ("D" "STOP Search" stop-search)
+   ("q" "Back to Main" bes-menu)])
+
 (transient-define-prefix start-search-menu ()
   "Menu for configuring TPG hyperparameters before starting a run."
   :refresh-suffixes t
@@ -238,7 +267,8 @@
    ("g" "Force Refresh" revert-buffer)]
 
   ["Runs"
-   ("S" "Configure & START" start-search-menu)]
+   ("S" "Configure & START" start-search-menu)
+   ("D" "Stop a search" stop-search-menu)]
 
   ["Navigation"
    ("q" "Quit Menu" transient-quit-one)])

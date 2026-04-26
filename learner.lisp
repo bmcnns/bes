@@ -1,7 +1,7 @@
 (in-package :bes)
 
 (defstruct learner
-  (id (gensym "LEARNER-"))
+  (id (gensym (format nil "LEARNER-~A-" (who-am-i))))
   (program (make-program))
   (action (make-action)))
 

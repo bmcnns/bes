@@ -62,14 +62,50 @@
     (dolist (entry worst)
       (delete-team (car entry)))))
 
+(defun should-send-migrants-p ()
+  "Returns T periodically when the generation matches the migration interval."
+  (= (mod *generation* *migration-interval*) 0))
+
+(defun send-migrants (evaluation-scores)
+  "Periodically send the best individual from this island to another island."
+  (let* ((island-id (who-am-i))
+	 (neighbours (get-neighbour-ids island-id)))
+    (when neighbours
+      (let ((random-neighbour (random-choice neighbours))
+	    (best-individual (car (alexandria:extremum evaluation-scores #'> :key #'cdr))))
+	(send-migrant-over-socket random-neighbour best-individual)))))
+
+(defun receive-migrants ()
+  "Replaces the worst individuals unless the migration buffer
+   exceeds the population size (albeit unlikely) in which case
+   it simply adds them all to the population."
+
+  ;; Internal teams are added unconditionally
+  (loop for internal-team = (pop-internal-team)
+	while internal-team
+	do (push internal-team *teams*))
+
+  ;; Root teams compete for the 'worst' slots.
+  (loop for root-team = (pop-root-team)
+	while root-team
+	do (push root-team *teams*)))
+
 (defun reproduce ()
   (loop while (< (length (root-teams)) *population-size*)
 	do (mutate-team (clone-team (random-choice (root-teams))))))
 
 (defun evolve ()
   "Evolve the population for a single generation."
-  (select (evaluate))
-  (reproduce))
+  (receive-migrants)
+
+  (let ((evaluation-scores (evaluate)))
+
+    (when (should-send-migrants-p)
+      (send-migrants evaluation-scores))
+
+    (select evaluation-scores)
+    
+    (reproduce)))
 
 (defun run-search (mode gym-environment-name dataset-name seed)
   "Search the solution space with a tangled program graph."

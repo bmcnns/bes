@@ -157,32 +157,49 @@
 		     :msg ,message))))
     (notify-telemetry payload)))
 
-(defun send-migrant (from-id to-id team)
-  "Sends a TEAM from island FROM-ID to island TO-ID through a TCP socket.
+(defun send-migrant-over-socket (island-id root-team)
+  "Sends a TEAM to island ISLAND-ID through a TCP socket.
    Notifies the telemetry client that a migrant was sent over UDP."
-  (let ((receiver-ip-address (lookup-island-ip-by-id to-id)))
-    ;; Send the migrant to the receiving island over TCP.
-    (usocket:with-client-socket (socket stream receiver-ip-address 8080)
-      (prin1 `(:type :migrant
-	       :from ,from-id
-	       :ts ,(get-universal-time)
-	       :team ,team)
-	     stream)
-      (finish-output stream))
-    ;; Notify the telemetry client that a migrant was sent over UDP.
-    (emit-message (format nil "Migrant was sent to island ~A.~%" to-id))))
+  (let ((receiver-ip-address (lookup-island-ip-by-id island-id)))
+    (handler-case
+	(progn
+	  (usocket:with-client-socket (socket stream receiver-ip-address 8080)
+	    (prin1 `(:type :migrant
+		     :from ,(who-am-i)
+		     :ts ,(get-universal-time)
+		     :team ,(serialize-team root-team))
+		   stream)
+	    (finish-output stream))
+	  ;; Notify the telemetry client over UDP that a migrant was sent.
+	  (emit-message (format nil "Migrant was sent to island ~A.~%" island-id)))
+      (error (e)
+	(emit-error (format nil "Failed to send migrant to ~A: ~A~%" island-id e))))))
+
+(defun receive-migrant-over-socket (msg)
+  (when *running*
+    (let* ((from-id (getf msg :from))
+	   (root-team (deserialize-team (getf msg :team) (make-hash-table :test 'equal)))
+	   ;; Visited map ensures we only push each unique team to the buffer once.
+	   (visited (make-hash-table :test 'eq)))
+      (labels ((process-migrant (tm)
+		 (unless (gethash tm visited)
+		   (setf (gethash tm visited) t)
+
+		   (if (eq tm root-team)
+		       (push-root-team tm)
+		       (push-internal-team tm))
+
+		   ;; Recurse through learners to find internal teams
+		   (dolist (learner (team-learners tm))
+		     (let ((action (action-action (learner-action learner))))
+		       (when (team-p action)
+			 (process-migrant action)))))))
+	(process-migrant root-team)
+	(emit-message (format nil "Migrant received from island ~A.~%" from-id))))))
 
 (defun get-neighbour-ids (island-id)
   "Returns the island IDs that this island ID is connected to."
   (cdr (assoc island-id *topology* :test #'equal)))
-
-(defun handle-migrant-received (msg)
-  "When a migrant is received through TCP, push it to the migration buffer.
-   Then send a migrant received message to the telemetry client."
-  (let ((from (getf msg :from))
-	(team (getf msg :team)))
-    (emit-message (format nil "Migrant was received from island ~A.~%" from))
-    (push-migrant team)))
 
 (defun set-global-parameters (population-size
 			      num-observations num-actions
@@ -331,15 +348,19 @@
 	   (lambda ()
 	     (usocket:with-server-socket (server (usocket:socket-listen "0.0.0.0" 8080))
 	       (loop
-		 (usocket:with-connected-socket (client (usocket:socket-accept server))
-		   (let* ((stream (usocket:socket-stream client))
-			  (msg (read stream nil :eof)))
-		     (unless (eq msg :eof)
-		       ;; Dispatch according to the request received
-		       (ecase (getf msg :type)
-			 (:migrant (handle-migrant-received msg))
-			 (:start-search (handle-start-search msg))
-	                 (:stop-search (handle-stop-search)))))))))
+		 (let ((client-socket (usocket:socket-accept server)))
+		   (bt:make-thread
+		    (lambda ()
+		      (usocket:with-connected-socket (client client-socket)
+			(let* ((stream (usocket:socket-stream client))
+			       (msg (read stream nil :eof)))
+			  (unless (eq msg :eof)
+			    ;; Dispatch according to the request received
+			    (ecase (getf msg :type)
+			      (:migrant (receive-migrant-over-socket msg))
+			      (:start-search (handle-start-search msg))
+			      (:stop-search (handle-stop-search)))))))
+		    :name (format nil "search-handler-~A" (get-universal-time)))))))
 	   :name "tcp-listener")
 	  *server-threads*)))
 

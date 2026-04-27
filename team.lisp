@@ -1,77 +1,120 @@
 (in-package :bes)
 
-(defparameter *team-id-generator* (make-unique-id-generator "T"))
+(defparameter *team-id-generator* (make-counter))
 
 (defstruct (team (:constructor %make-team))
-  (id (funcall *team-id-generator*))
-  learners)
-  
-(defun execute-team (team observation vm-cache)
-  (declare (optimize (speed 3) (safety 0))
-           (type (simple-array double-float (*)) observation))
-  
-  (let ((learners (team-learners team))
-        (best-bid sb-ext:double-float-negative-infinity) 
-        (best-learner nil))
-    (declare (type double-float best-bid))
-    
-    ;; 1. Find the winning learner
-    (dolist (learner learners)
-      (let ((bid (the double-float (get-bid learner observation vm-cache))))
-        (when (> bid best-bid)
-          (setf best-bid bid)
-          (setf best-learner learner))))
-    
-    ;; 2. Determine action and track path
-    (let ((action (learner-action best-learner))
-          (current-id (team-id team)))
-      (if (team-p action)
-          ;; Recursive Step: Prepend current-id to the path returned from below
-          (multiple-value-bind (final-action path) 
-              (execute-team action observation vm-cache)
-            (values final-action (cons (learner-id best-learner) path)))
-          
-          ;; Base Case: Return the atomic action and the start of the path list
-          (values action (list (learner-id best-learner)))))))
+  (id (format nil "TEAM-~A-~A" (who-am-i) (funcall *team-id-generator*)))
+  (references 0) ;; Track how many learners point here.
+  (type :root)
+  (learners (loop repeat *init-num-learners*
+		  collect (make-learner))))
 
-(defun make-team (&key (attempts 5))
-  (let* ((min (experiment-initial-minimum-number-of-learners *experiment*))
-         (max (experiment-initial-maximum-number-of-learners *experiment*))
-         (learners (loop repeat (random-range min max)
-                         collect (make-learner)))
-         (atomic-learners (remove-if-not #'atomic-p learners))
-         (unique-atomic-actions (remove-duplicates (mapcar #'learner-action atomic-learners) :test #'equal)))
-    (cond
-      ((>= (length unique-atomic-actions) 2)
-       (%make-team :id (funcall *team-id-generator*)
-                  :learners learners))
-      ((> attempts 0)
-       (make-team :attempts (1- attempts)))
-      (t
-       (error "Ran out of attempts to make a team. Not enough distinct atomic actions to ensure >= 2 per team.")))))
+(defun serialize-team (team)
+  `(:id ,(team-id team)
+    :type ,(team-type team)
+    :learners ,(mapcar #'serialize-learner (team-learners team))))
 
-(defun accuracy (team dataset vm-cache)
-  (declare (optimize (speed 3) (safety 0)))
-  (let ((X (observations dataset))
-        (y (actions dataset))
-        (correct 0))
-    (declare (type fixnum correct)
-             (type simple-vector X)
-             ;; FIX: Match the struct definition (Generic Vector)
-             (type simple-vector y)) 
+(defun deserialize-team (data registry &optional (is-root t))
+  (let* ((id (getf data :id))
+	 (existing-team (gethash id registry)))
+    (cond (existing-team
+	   ;; Scenario: We've seen this team before (e.g., via a different path)
+	   (incf (team-references existing-team))
+	   existing-team)
+	  (t
+	   ;; Scenario: First time seeing this team
+	   (let ((new-team (%make-team
+			    :id (format nil "TEAM-~A-~A" (who-am-i) (funcall *team-id-generator*))
+			    :type (getf data :type)
+			    :references (if is-root 0 1))))
+	     (setf (gethash id registry) new-team)
+	     ;; Now fill the learners
+	     (setf (team-learners new-team)
+		   (mapcar (lambda (l) (deserialize-learner l registry))
+			   (getf data :learners)))
+	     new-team)))))
 
-    (loop for i fixnum from 0 below (length y)
-          do (let* ((pred (the fixnum (execute-team team (aref X i) vm-cache)))
-                    ;; FIX: Read the pointer, then promise it points to a float
-                    (target (the fixnum (aref y i))))
-               
-               ;; This comparison is still fast (float registers)
-               ;; but we pay a small cost to dereference the 'y' pointer first.
-               (when (= pred target) 
-                 (incf correct))))
-    
-    (- (/ (float correct 0d0) (length y)))))
+(defun make-team (&rest args)
+  "The primary team factory. Ensures every team is globally tracked."
+  (let ((team (apply #'%make-team args)))
+    (push team *teams*)
+    team))
 
-(defun eval-team (team dataset)
-  (accuracy team dataset (make-hash-table :test 'eql)))
-         
+(defun add-reference (target-team)
+  "Call this when a learner points to a team."
+  (incf (team-references target-team))
+  (setf (team-type target-team) :internal))
+
+(defun delete-reference (target-team)
+  "Call this when a learner is removed or mutated away from this team."
+  (decf (team-references target-team))
+  (when (<= (team-references target-team) 0)
+    (setf (team-references target-team) 0)
+    (setf (team-type target-team) :root)))
+
+(defun execute-team (team observation)
+  "Executes the TPG graph starting at TEAM.
+   This follows the action of the learner with the highest bid."
+  (let* ((learners (team-learners team))
+	 (winner (alexandria:extremum learners #'>
+				      :key (lambda (l) (bid l observation)))))
+    (let ((act (learner-action winner)))
+      (if (eq (action-type act) :atomic)
+	  (action-action act)
+	  (execute-team (action-action act) observation)))))
+
+(defun execute-team-on-dataset (team dataset)
+  "Batch executes a team across all the observations in DATASET."
+  (map 'list (lambda (obs) (execute-team team obs)) (observations dataset)))
+
+(defmethod print-object ((tm team) stream)
+  "Updates the default printer to pretty print teams by showing
+   whether they are root/internal and by enumerating their
+   learner IDs, actions."
+  (flet ((format-learner (learner)
+	   (let ((id (learner-id learner))
+		 (action (learner-action learner)))
+	   (format nil "~A: ~A" id action))))
+    (print-unreadable-object (tm stream :type nil :identity nil)
+      (format stream "~A-TEAM ~A~%~{~A~%~}"
+	      (team-type tm)
+	      (team-id tm)
+	      (mapcar #'format-learner (team-learners tm))))))
+
+(defun closure (team)
+  "Returns a list of all teams reachable from TEAM (including itself)."
+  (let ((visited (make-hash-table :test 'eq)))
+    (labels ((traverse (current)
+	       (unless (gethash current visited)
+		 (setf (gethash current visited) t)
+		 (dolist (learner (team-learners current))
+		   (let ((act (learner-action learner)))
+		     (when (eq (action-type act) :reference)
+		       (traverse (action-action act))))))))
+      (traverse team))
+    (alexandria:hash-table-keys visited)))
+
+(defun creates-cycle-p (current-team target-team)
+  "Returns T if the target-team has a path back to current-team."
+  (member current-team (closure target-team) :test #'eq))
+
+(defun root-teams ()
+  "Returns all teams that are candidate solutions."
+  (remove-if-not (lambda (team)
+		   (eq (team-type team) :root))
+		 *teams*))
+
+(defun clone-team (team)
+  "Deep copy a team."
+  (make-team
+   :type (team-type team)
+   :learners (mapcar #'clone-learner (team-learners team))))
+
+(defun delete-team (team)
+  "Removes a team from the population and dereferences all of
+   the internal teams it may reference."
+  (setf *teams* (delete team *teams* :test #'eq))
+  (dolist (learner (team-learners team))
+    (let ((action (learner-action learner)))
+      (when (eq (action-type action) :reference)
+	(delete-reference (action-action action))))))

@@ -1,38 +1,30 @@
 (in-package :bes)
 
-(defparameter *learner-id-generator* (make-unique-id-generator "L"))
+(defparameter *learner-id-generator* (make-counter))
 
 (defstruct learner
-  (id (funcall *learner-id-generator*))
+  (id (format nil "LEARNER-~A-~A" (who-am-i) (funcall *learner-id-generator*)))
   (program (make-program))
-  (action (random-action)))
+  (action (make-action)))
 
-(defun reference-p (form)
-  "A reference is a list (GOTO <team-id>) where <team-id> is a symbol or string."
-  (and (consp form) (eq (first form) 'GOTO) (second form)))
+(defun serialize-learner (learner)
+  `(:id ,(learner-id learner)
+    :program ,(serialize-program (learner-program learner))
+    :action ,(serialize-action (learner-action learner))))
 
-(defun atomic-p (learner)
-  "A learner is atomic if its action is not a reference to another team."
-  (not (reference-p (learner-action learner))))
+(defun deserialize-learner (data registry)
+  (make-learner :id (format nil "LEARNER-~A-~A" (who-am-i) (funcall *learner-id-generator*))
+		:program (deserialize-program (getf data :program))
+		:action (deserialize-action (getf data :action) registry)))
 
-(defun register-zero (registers)
-  (elt registers 0))
+(defun bid (learner observations)
+  "Return the first register after executing the learner's program.
+   The first register indicates how confident the learner is in its action."
+  (let ((program (learner-program learner)))
+    (aref (execute-program program observations) 0)))
 
-(defun get-bid (learner observations vm-cache)
-  (unless (typep observations '(simple-array double-float (*)))
-    (error "'get-bid' received ~A.~%Expected (SIMPLE-ARRAY DOUBLE-FLOAT (*))." (type-of observations)))
-  (let* ((id (learner-id learner))
-         (vm-program (or (gethash id vm-cache)
-                         (setf (gethash id vm-cache)
-                               (build-vm-program (program-instructions (learner-program learner)))))))
-    (let ((regs (execute-vm-program vm-program observations)))
-      (aref regs 0))))
-  
-(defun random-action ()
-  (let ((actions (experiment-actions *experiment*)))
-    (random-choice actions)))
-
-(defun get-reference (reference)
-  (if (reference-p reference)
-      (cadr reference)
-      (error "Tried to get a reference of something that is not a reference. ~A~%" reference)))
+(defun clone-learner (learner)
+  "Deep copy a learner."
+  (make-learner
+   :program (clone-program (learner-program learner))
+   :action (clone-action (learner-action learner))))

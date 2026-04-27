@@ -1,76 +1,85 @@
 (in-package :bes)
 
-(defparameter *program-id-generator* (make-unique-id-generator "P"))
+(defstruct program
+  (instructions (make-array *init-program-size*
+			    :fill-pointer t 
+			    :adjustable t
+			    :initial-contents
+			    (loop repeat *init-program-size*
+				  collect (make-instruction)))
+   :type (vector t *)))
 
-(defun program-p (form)
-  (and
-   (listp form)
-   (equal (car form) 'PROGRAM)
-   (symbolp (cadr form))
-   (listp (caddr form))
-   (listp (caaddr form))))
+(defun serialize-program (program)
+  "Makes a machine-readable program that can be sent over the wire."
+  `(:instructions ,(coerce (program-instructions program) 'list)))
 
+(defun deserialize-program (data)
+  "From a serialized program back into the actual struct."
+  (let ((instructions (getf data :instructions)))
+    (make-program
+     :instructions (make-array (length instructions)
+		:fill-pointer t
+		:adjustable t
+		:initial-contents
+		instructions))))
 
-(defun random-argument ()
-  "Return a random argument (either observation or register) based on the observation probability in *EXPERIMENT*."
-  (if (< (random 1.0) (experiment-observation-probability *experiment*))
-      (random-observation)
-      (random-register)))
+(defun execute-program (program observations)
+  "Given an encoded program and a double-array of OBSERVATIONS
+  representing the state. Execute the program and return its
+  registers."
+  (declare (optimize (speed 3) (safety 0) (debug 0))
+	   (type (simple-array double-float (*)) observations)
+           (type program program))
+  (let* ((instructions (program-instructions program))
+         (registers (make-array +num-registers+
+                               :element-type 'double-float
+                               :initial-element 0.0d0)))
+    (declare (type (simple-array double-float (*)) registers)
+             (type (vector t *) instructions))
+    
+    (loop for ins across instructions do
+      (let* ((op   (instruction-op ins))
+             (dest (instruction-dest ins))
+             (v1   (the double-float (instruction-src1-val ins)))
+             (arg1 (case (instruction-src1-type ins)
+                     (:reg (aref registers (the fixnum (truncate v1))))
+                     (:obs (aref observations (the fixnum (truncate v1))))
+                     (t v1))))
+        (declare (type double-float arg1) (type fixnum dest))
+        
+        (setf (aref registers dest)
+              (if (= (the fixnum (instruction-arity ins)) 1)
+                  (case op
+                    (:SIN (sin arg1))
+                    (:NEG (- arg1))
+                    (:ABS (abs arg1))
+                    (:LOG (if (> arg1 0.0d0) (log arg1) 0.0d0))
+                    (t 0.0d0))
+                  (let* ((v2   (the double-float (instruction-src2-val ins)))
+                         (arg2 (case (instruction-src2-type ins)
+                                 (:reg (aref registers (the fixnum (truncate v2))))
+                                 (:obs (aref observations (the fixnum (truncate v2))))
+                                 (t v2))))
+                    (declare (type double-float arg2))
+                    (case op
+                      (:ADD (+ arg1 arg2))
+                      (:SUB (- arg1 arg2))
+                      (:MUL (* arg1 arg2))
+                      (:DIV (if (zerop arg2) 0.0d0 (/ arg1 arg2)))
+                      (:COS (cos arg1))
+                      (t 0.0d0)))))))
+    registers))
 
-(defun random-constant ()
-  "Return a random constant sampled uniformly from the constant range in *EXPERIMENT*."
-  (let* ((constant-range (experiment-constant-range *experiment*)))
-    (destructuring-bind (lower-bound upper-bound) constant-range
-      (coerce (random-range lower-bound upper-bound) 'double-float))))
+(defun pprint-program (program)
+  "Transforms a program into a list of symbolic instructions."
+  (map 'list #'instruction->sexp (program-instructions program)))
 
-(defun random-register ()
-  "Return a randomly selected register from *EXPERIMENT*."
-  (random-choice (experiment-registers *experiment*)))
+(defmethod print-object ((p program) stream)
+  "Updates the default printer to pretty print instructions symbolically."
+  (print-unreadable-object (p stream :type t :identity t)
+    (format stream "~%~{ ~A~%~}" (pprint-program p))))
 
-(defun random-observation ()
-  "Return a randomly selected observation variable from *EXPERIMENT*."
-  (random-choice (experiment-observations *experiment*)))
-
-(defun random-opcode ()
-  "Return a randomly selected opcode from the instruction set in *EXPERIMENT*."
-  (random-choice (experiment-instruction-set *experiment*)))
-
-(defun random-instruction ()
-  "Return a syntactically valid instruction sampled from the *EXPERIMENT* configuration.
-   For binary opcodes, exactly one of the inputs may be a constant, based on the constant-probability parameter.
-   For unary opcodes, the input must either be a register or an observation variable."
-  (let* ((instruction (random-opcode))
-         (arity (lookup-arity instruction))
-         (constant-probability (experiment-constant-probability *experiment*)))
-    (cond
-      ((= arity 1)
-       (list (random-register) instruction (random-argument)))
-      ((= arity 2)
-       (if (< (random 1.0) constant-probability)
-           (let ((constant-position (random 2)))
-             (if (= 0 constant-position)
-                 (list (random-register) instruction (random-constant) (random-argument))
-                 (list (random-register) instruction (random-argument) (random-constant))))
-           (list (random-register) instruction (random-argument) (random-argument))))
-      (t (error "Unexpected arity")))))
-
-(defun make-program ()
-  (let* ((min-length (experiment-minimum-program-length *experiment*))
-         (max-length (experiment-maximum-program-length *experiment*))
-         (instructions
-           (loop repeat (random-range min-length max-length)
-                 collect (random-instruction))))
-    `(PROGRAM ,(funcall *program-id-generator*) ,instructions)))
-
-(defun program-id (program)
-  (unless (program-p program)
-    (error "PROGRAM-ID expects a PROGRAM. Got ~A instead.~%" program))
-  (cadr program))
-
-(defun program-instructions (program)
-  (unless (program-p program)
-    (error "PROGRAM-INSTRUCTIONS expects a PROGRAM. Got ~A instead.~%" program))
-  (caddr program))
-
-(defun instruction-dest (instruction)
-  (first instruction))
+(defun clone-program (program)
+  "Deep-copies a program."
+  (make-program
+   :instructions (alexandria:copy-array (program-instructions program))))

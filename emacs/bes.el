@@ -1,5 +1,6 @@
 ;; -*- lexical-binding: t; -*-
 (require 'transient)
+(require 'cl-lib)
 
 (defvar *islands*
   '(("127.0.0.1" . 0) ;; ds-login2
@@ -38,26 +39,6 @@
                     collect (cons k v))
            " ")
           ")"))
-
-(transient-define-suffix start-search ()
-  (interactive)
-  (let* ((args (transient-args 'start-search-menu))
-	 (island-id (string-to-number (transient-arg-value "--island=" args)))
-	 (ip-address (lookup-ip-by-island-id island-id))
-	 (payload (make-payload-from-transient-args args)))
-    (message "[LOCAL] Sending start-search request to island %s at IP address %s." island-id ip-address)
-    (message "%s" payload)
-    (let ((proc (make-network-process
-		 :name "start-search-tcp-client"
-		 :host ip-address
-		 :service 8080
-		 :family 'ipv4
-		 :nowait nil
-		 :sentinel (lambda (proc event)
-			     (message "TCP Event: %s" event)))))
-      (process-send-string proc (concat (plist-to-cl-sexp payload) "\n"))
-      (process-send-eof proc)
-      proc)))
 
 (defun lookup-ip-by-island-id (id)
   "Given an island ID, look up the island's IP address."
@@ -150,48 +131,58 @@
 (transient-define-suffix start-search ()
   (interactive)
   (let* ((args (transient-args 'start-search-menu))
-	 (island-id (string-to-number (transient-arg-value "--island=" args)))
-	 (ip-address (lookup-ip-by-island-id island-id))
-	 (payload (make-payload-from-transient-args args)))
-    (message "[LOCAL] Sending start-search request to island %s at IP address %s." island-id ip-address)
+         (island-arg (transient-arg-value "--island=" args))
+         (island-ids (if (string= island-arg "all")
+                         '(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15)
+                         (list (string-to-number island-arg))))
+         (ip-addresses (mapcar #'lookup-ip-by-island-id island-ids))
+         (payload (make-payload-from-transient-args args)))
+    (message "[LOCAL] Sending start-search request to islands %s at IPs %s."
+             island-ids ip-addresses)
     (message "%s" payload)
-    (let ((proc (make-network-process
-		 :name "start-search-tcp-client"
-		 :host ip-address
-		 :service 8080
-		 :family 'ipv4
-		 :nowait nil
-		 :sentinel (lambda (proc event)
-			     (message "TCP Event: %s" event)))))
-      (process-send-string proc (format "%S\n" payload))
-      (process-send-eof proc)
-      proc)))
+    (cl-loop for island-id in island-ids
+             for ip-address in ip-addresses
+             do
+             (message "[LOCAL] Sending start-search request to island %s at IP address %s."
+                      island-id ip-address)
+             (let ((proc (make-network-process
+                          :name "start-search-tcp-client"
+                          :host ip-address
+                          :service 8080
+                          :family 'ipv4
+                          :nowait nil
+                          :sentinel (lambda (_proc event)
+                                      (message "TCP Event: %s" event)))))
+               (process-send-string proc (concat (plist-to-cl-sexp payload) "\n"))
+               (process-send-eof proc)))))
 
 (transient-define-suffix stop-search ()
   (interactive)
   (let* ((args (transient-args 'stop-search-menu))
-	 (island-id (string-to-number (transient-arg-value "--island=" args)))
-	 (ip-address (lookup-ip-by-island-id island-id))
-	 (payload '(:type :stop-search)))
-    (message "[LOCAL] Sending stop-search request to island %s at IP address %s." island-id ip-address)
-    (message "%s" payload)
-    (let ((proc (make-network-process
-		 :name "stop-search-tcp-client"
-		 :host ip-address
-		 :service 8080
-		 :family 'ipv4
-		 :nowait nil
-		 :sentinel (lambda (proc event)
-			     (message "TCP Event: %s" event)))))
-      (process-send-string proc (format "%S\n" payload))
-      (process-send-eof proc)
-      proc)))
+         (island-arg (transient-arg-value "--island=" args))
+         (island-ids (if (string= island-arg "all")
+                         '(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15)
+                       (list (string-to-number island-arg))))
+         (payload '(:type :stop-search)))
+    (cl-loop for id in island-ids
+             for ip = (lookup-ip-by-island-id id)
+             do
+             (when ip
+               (message "[LOCAL] Stopping island %s at %s" id ip)
+               (condition-case nil
+                   (let ((proc (make-network-process
+                                :name "stop-search-tcp-client"
+                                :host ip :service 8080 :family 'ipv4
+                                :nowait t))) ;; t prevents the 'hang' and immediate error
+                     (process-send-string proc (format "%S\n" payload))
+                     (process-send-eof proc))
+                 (error (message "[LOCAL] Island %s connection failed (already down)." id)))))))
 	    
 (transient-define-prefix stop-search-menu ()
   "Menu for stopping searches."
   ["Island"
    ("-I" "Island" "--island="
-    :choices ("0" "1" "2" "3" "4" "5" "6" "7" "8" "9" "10" "11" "12" "13" "14" "15"))]
+    :choices ("all" "0" "1" "2" "3" "4" "5" "6" "7" "8" "9" "10" "11" "12" "13" "14" "15"))]
   ["Actions"
    ("D" "STOP Search" stop-search)
    ("q" "Back to Main" bes-menu)])
@@ -221,7 +212,7 @@
 	   "*seed=random")
   ["Island"
     ("-I" "Island" "--island="
-    :choices ("0" "1" "2" "3" "4" "5" "6" "7" "8" "9" "10" "11" "12" "13" "14" "15"))]
+    :choices ("all" "0" "1" "2" "3" "4" "5" "6" "7" "8" "9" "10" "11" "12" "13" "14" "15"))]
   ["Evaluation"
    ("-M" "Evaluation Mode" "--mode="
     :choices ("online" "offline"))

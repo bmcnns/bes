@@ -5,8 +5,8 @@
   :license "GPL-3"
   :depends-on ("usocket" "alexandria" "bordeaux-threads" "lparallel")
   :components ((:file "package")
-	       (:file "globals")
 	       (:file "helpers")
+	       (:file "globals")
 	       (:file "instruction")
 	       (:file "program")
 	       (:file "action")

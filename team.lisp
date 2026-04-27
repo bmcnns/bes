@@ -1,7 +1,7 @@
 (in-package :bes)
 
 (defstruct (team (:constructor %make-team))
-  (id (gensym (format nil "TEAM-~A-" (who-am-i))))
+  (id (format nil "TEAM-~A-~A" (who-am-i) (funcall *team-id-generator*)))
   (references 0) ;; Track how many learners point here.
   (type :root)
   (learners (loop repeat *init-num-learners*

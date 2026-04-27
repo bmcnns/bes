@@ -1,5 +1,10 @@
 (in-package :bes)
 
+(defun make-counter ()
+  (let ((count 0))
+    (lambda ()
+      (incf count))))
+
 (defun random-choice (seq)
   "Returns a random element from the sequence SEQ."
   (elt seq (random (length seq))))

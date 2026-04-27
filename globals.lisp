@@ -95,3 +95,7 @@
   "The fitness function wrapped in a closure that
    is made according to whether the mode is set to
    online or offline.")
+
+(defparameter *learner-id-generator* (make-counter))
+
+(defparameter *team-id-generator* (make-counter))

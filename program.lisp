@@ -9,6 +9,20 @@
 				  collect (make-instruction)))
    :type (vector t *)))
 
+(defun serialize-program (program)
+  "Makes a machine-readable program that can be sent over the wire."
+  `(:instructions ,(coerce (program-instructions program) 'list)))
+
+(defun deserialize-program (data)
+  "From a serialized program back into the actual struct."
+  (let ((instructions (getf data :instructions)))
+    (make-program
+     :instructions (make-array (length instructions)
+		:fill-pointer t
+		:adjustable t
+		:initial-contents
+		instructions))))
+
 (defun execute-program (program observations)
   "Given an encoded program and a double-array of OBSERVATIONS
   representing the state. Execute the program and return its

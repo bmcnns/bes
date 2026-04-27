@@ -5,6 +5,16 @@
   (program (make-program))
   (action (make-action)))
 
+(defun serialize-learner (learner)
+  `(:id ,(learner-id learner)
+    :program ,(serialize-program (learner-program learner))
+    :action ,(serialize-action (learner-action learner))))
+
+(defun deserialize-learner (data registry)
+  (make-learner :id (getf data :id)
+		:program (deserialize-program (getf data :program))
+		:action (deserialize-action (getf data :action) registry)))
+
 (defun bid (learner observations)
   "Return the first register after executing the learner's program.
    The first register indicates how confident the learner is in its action."

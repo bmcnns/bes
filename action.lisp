@@ -4,6 +4,20 @@
   (type :atomic)
   (action (random *num-actions*)))
 
+(defun serialize-action (action)
+  `(:type ,(action-type action)
+    :action ,(let ((action (action-action action)))
+	      (etypecase action
+		(number action)
+		(team (serialize-team action))))))
+
+(defun deserialize-action (data registry)
+  (make-action :type (getf data :type)
+	       :action (let ((action (getf data :action)))
+			 (typecase action
+			   (number action)
+			   (otherwise (deserialize-team action registry nil))))))
+
 (defmethod print-object ((act action) stream)
   "Updates the default printer to pretty print actions
    in format either ATOMIC(i) or GOTO TEAM-i."

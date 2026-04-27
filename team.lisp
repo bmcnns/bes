@@ -7,6 +7,31 @@
   (learners (loop repeat *init-num-learners*
 		  collect (make-learner))))
 
+(defun serialize-team (team)
+  `(:id ,(team-id team)
+    :type ,(team-type team)
+    :learners ,(mapcar #'serialize-learner (team-learners team))))
+
+(defun deserialize-team (data registry &optional (is-root t))
+  (let* ((id (getf data :id))
+	 (existing-team (gethash id registry)))
+    (cond (existing-team
+	   ;; Scenario: We've seen this team before (e.g., via a different path)
+	   (incf (team-references existing-team))
+	   existing-team)
+	  (t
+	   ;; Scenario: First time seeing this team
+	   (let ((new-team (%make-team
+			    :id id
+			    :type (getf data :type)
+			    :references (if is-root 0 1))))
+	     (setf (gethash id registry) new-team)
+	     ;; Now fill the learners
+	     (setf (team-learners new-team)
+		   (mapcar (lambda (l) (deserialize-learner l registry))
+			   (getf data :learners)))
+	     new-team)))))
+
 (defun make-team (&rest args)
   "The primary team factory. Ensures every team is globally tracked."
   (let ((team (apply #'%make-team args)))

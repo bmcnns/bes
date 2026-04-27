@@ -63,36 +63,37 @@
 (defun mutate-constant (program)
   "Mutate a random constant in a program."
   (flet ((add-noise (c)
-           (let* ((u1 (max 1e-12 (random 1.0)))
-                  (u2 (random 1.0))
-                  (z (* (sqrt (* -2.0 (log u1)))
-                        (cos (* 2.0 pi u2)))))
-             (+ c (* 0.1 z)))))
+	   (let* ((u1 (max 1e-12 (random 1.0)))
+		  (u2 (random 1.0))
+		  (z (* (sqrt (* -2.0 (log u1)))
+			(cos (* 2.0 pi u2)))))
+	     (+ c (* 0.1 z)))))
     (let* ((instructions (program-instructions program))
-           (instructions-with-constants
-             (remove-if-not #'instruction-has-constant-p instructions))
-           (instr (random-choice instructions-with-constants))
-           (slots (remove nil
-                          (list (when (eq (instruction-src1-type instr) :const)
-                                  :src1)
-                                (when (eq (instruction-src2-type instr) :const)
-                                  :src2)))))
-      (case (random-choice slots)
-        (:src1
-         (setf (instruction-src1-val instr)
-               (add-noise (instruction-src1-val instr)))
-         (when (mutate-constant-sign-p)
-           (setf (instruction-src1-val instr)
-                 (- (instruction-src1-val instr)))))
+	   (instructions-with-constants
+	     (remove-if-not #'instruction-has-constant-p instructions)))
+      (when instructions-with-constants
+	(let* ((instr (random-choice instructions-with-constants))
+	       (slots (remove nil
+			      (list (when (eq (instruction-src1-type instr) :const)
+				      :src1)
+				    (when (eq (instruction-src2-type instr) :const)
+				      :src2)))))
+	  (case (random-choice slots)
+	    (:src1
+	     (setf (instruction-src1-val instr)
+		   (add-noise (instruction-src1-val instr)))
+	     (when (mutate-constant-sign-p)
+	       (setf (instruction-src1-val instr)
+		     (- (instruction-src1-val instr)))))
 
-        (:src2
-         (setf (instruction-src2-val instr)
-               (add-noise (instruction-src2-val instr)))
-         (when (mutate-constant-sign-p)
-           (setf (instruction-src2-val instr)
-                 (- (instruction-src2-val instr))))))
+	    (:src2
+	     (setf (instruction-src2-val instr)
+		   (add-noise (instruction-src2-val instr)))
+	     (when (mutate-constant-sign-p)
+	       (setf (instruction-src2-val instr)
+		     (- (instruction-src2-val instr))))))))
 
-      program))) 
+      program)))
 
 (defun mutate-program (program)
   "Mutate a program by adding/deleting/swapping instructions

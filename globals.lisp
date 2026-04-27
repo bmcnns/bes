@@ -96,9 +96,5 @@
    is made according to whether the mode is set to
    online or offline.")
 
-(defparameter *learner-id-generator* (make-counter))
-
-(defparameter *team-id-generator* (make-counter))
-
 (defparameter *migration-interval* 50
   "The number of generations to wait between sending migrants.")

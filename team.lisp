@@ -1,5 +1,7 @@
 (in-package :bes)
 
+(defparameter *team-id-generator* (make-counter))
+
 (defstruct (team (:constructor %make-team))
   (id (format nil "TEAM-~A-~A" (who-am-i) (funcall *team-id-generator*)))
   (references 0) ;; Track how many learners point here.
@@ -22,7 +24,7 @@
 	  (t
 	   ;; Scenario: First time seeing this team
 	   (let ((new-team (%make-team
-			    :id id
+			    :id (format nil "TEAM-~A-~A" (who-am-i) (funcall *team-id-generator*))
 			    :type (getf data :type)
 			    :references (if is-root 0 1))))
 	     (setf (gethash id registry) new-team)

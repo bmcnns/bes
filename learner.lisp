@@ -1,5 +1,7 @@
 (in-package :bes)
 
+(defparameter *learner-id-generator* (make-counter))
+
 (defstruct learner
   (id (format nil "LEARNER-~A-~A" (who-am-i) (funcall *learner-id-generator*)))
   (program (make-program))
@@ -11,7 +13,7 @@
     :action ,(serialize-action (learner-action learner))))
 
 (defun deserialize-learner (data registry)
-  (make-learner :id (getf data :id)
+  (make-learner :id (format nil "LEARNER-~A-~A" (who-am-i) (funcall *learner-id-generator*))
 		:program (deserialize-program (getf data :program))
 		:action (deserialize-action (getf data :action) registry)))
 

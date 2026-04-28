@@ -207,7 +207,8 @@
 			      p-add p-del p-mut p-act p-swap
 			      gap init-program-size max-program-size
 			      p-add-instr p-del-instr p-swap-instrs
-			      p-mut-constant p-mut-constant-sign)
+			      p-mut-constant p-mut-constant-sign
+			      migration-interval)
   "Set the hyperparameters according to the TCP request."
   (setf *population-size* population-size)
   (setf *num-observations* num-observations)
@@ -230,7 +231,9 @@
   (setf *p-del-instr* p-del-instr)
   (setf *p-swap-instrs* p-swap-instrs)
   (setf *p-mut-constant* p-mut-constant)
-  (setf *p-mut-constant-sign* p-mut-constant-sign))
+  (setf *p-mut-constant-sign* p-mut-constant-sign)
+
+  (setf *migration-interval* migration-interval))
 
 (defun valid-search-parameters-p (mode gym-environment-name dataset-name
 				  num-observations num-actions
@@ -240,7 +243,7 @@
 				  gap init-program-size max-program-size
 				  p-add-instr p-del-instr p-swap-instrs
 				  p-mut-constant p-mut-constant-sign
-				  seed)
+				  migration-interval seed)
   "Returns T if the search parameters are valid. NIL otherwise."
        ;; 1. Check that mode is either :online or :offline
   (and (or (eq mode :online)
@@ -287,6 +290,7 @@
 	(p-swap-instrs (getf msg :p-swap-instrs))
 	(p-mut-constant (getf msg :p-mut-constant))
 	(p-mut-constant-sign (getf msg :p-mut-constant-sign))
+	(migration-interval (getf msg :migration-interval))
 	(seed (getf msg :seed)))
     (format t "~S~%" msg)
     (if (valid-search-parameters-p mode gym-environment-name dataset-name
@@ -295,7 +299,8 @@
 				   p-add p-del p-mut p-act p-swap gap
 				   init-program-size max-program-size
 				   p-add-instr p-del-instr p-swap-instrs
-				   p-mut-constant p-mut-constant-sign seed)
+				   p-mut-constant p-mut-constant-sign
+				   migration-interval seed)
 	(progn
 	  (set-global-parameters
 	    population-size
@@ -305,7 +310,8 @@
 	    p-swap gap init-program-size
 	    max-program-size p-add-instr
 	    p-del-instr p-swap-instrs
-	    p-mut-constant p-mut-constant-sign)
+	    p-mut-constant p-mut-constant-sign
+	    migration-interval)
 	  (emit-message (format nil "Search started on island ~A~%" (who-am-i)))
 	  (run-search mode gym-environment-name dataset-name seed))
 	(emit-error "The search parameters provided are invalid."))))

@@ -98,6 +98,8 @@
 			 (transient-arg-value "*p-mut-constant=" args)))
 	(p-mut-constant-sign (string-to-number
 			      (transient-arg-value "*p-mut-constant-sign=" args)))
+	(migration-interval (string-to-number
+			     (transient-arg-value "*migration-interval=" args)))
 	(seed (let ((seed-arg (transient-arg-value "*seed=" args)))
 		(cond
 		 ((string= seed-arg "random")
@@ -126,6 +128,7 @@
       :p-swap-instrs ,p-swap-instrs
       :p-mut-constant ,p-mut-constant
       :p-mut-constant-sign ,p-mut-constant-sign
+      :migration-interval ,migration-interval
       :seed ,seed)))
 
 (transient-define-suffix start-search ()
@@ -209,6 +212,7 @@
 	   "*population-size=160"
 	   "*init-num-learners=3"
 	   "*max-num-learners=inf"
+	   "*migration-interval=50"
 	   "*seed=random")
   ["Island"
     ("-I" "Island" "--island="
@@ -224,6 +228,7 @@
    ("-X" "Number of Actions" "*num-actions=")
    ("-P" "Population Size" "*population-size=")
    ("-g" "Gap" "*gap=")
+   ("-n" "Migration Interval" "*migration-interval=") 
    ("-s" "Seed" "*seed=")]
   [:description "Team Constraints"
    ("-l" "Initial Number of Learners" "*init-num-learners=")

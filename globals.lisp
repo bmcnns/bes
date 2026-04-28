@@ -98,3 +98,6 @@
 
 (defparameter *migration-interval* 50
   "The number of generations to wait between sending migrants.")
+
+(defparameter *batch-size* 1000
+  "The number of generations to wait between sending migrants.")

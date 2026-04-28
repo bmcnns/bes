@@ -208,7 +208,7 @@
 			      gap init-program-size max-program-size
 			      p-add-instr p-del-instr p-swap-instrs
 			      p-mut-constant p-mut-constant-sign
-			      migration-interval)
+			      migration-interval batch-size)
   "Set the hyperparameters according to the TCP request."
   (setf *population-size* population-size)
   (setf *num-observations* num-observations)
@@ -233,7 +233,8 @@
   (setf *p-mut-constant* p-mut-constant)
   (setf *p-mut-constant-sign* p-mut-constant-sign)
 
-  (setf *migration-interval* migration-interval))
+  (setf *migration-interval* migration-interval)
+  (setf *batch-size* batch-size))
 
 (defun valid-search-parameters-p (mode gym-environment-name dataset-name
 				  num-observations num-actions
@@ -243,7 +244,7 @@
 				  gap init-program-size max-program-size
 				  p-add-instr p-del-instr p-swap-instrs
 				  p-mut-constant p-mut-constant-sign
-				  migration-interval seed)
+				  migration-interval batch-size seed)
   "Returns T if the search parameters are valid. NIL otherwise."
        ;; 1. Check that mode is either :online or :offline
   (and (or (eq mode :online)
@@ -291,6 +292,7 @@
 	(p-mut-constant (getf msg :p-mut-constant))
 	(p-mut-constant-sign (getf msg :p-mut-constant-sign))
 	(migration-interval (getf msg :migration-interval))
+	(batch-size (getf msg :batch-size))
 	(seed (getf msg :seed)))
     (format t "~S~%" msg)
     (if (valid-search-parameters-p mode gym-environment-name dataset-name
@@ -300,7 +302,7 @@
 				   init-program-size max-program-size
 				   p-add-instr p-del-instr p-swap-instrs
 				   p-mut-constant p-mut-constant-sign
-				   migration-interval seed)
+				   migration-interval batch-size seed)
 	(progn
 	  (set-global-parameters
 	    population-size
@@ -311,7 +313,8 @@
 	    max-program-size p-add-instr
 	    p-del-instr p-swap-instrs
 	    p-mut-constant p-mut-constant-sign
-	    migration-interval)
+	    migration-interval
+	    batch-size)
 	  (emit-message (format nil "Search started on island ~A~%" (who-am-i)))
 	  (run-search mode gym-environment-name dataset-name seed))
 	(emit-error "The search parameters provided are invalid."))))

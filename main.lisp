@@ -28,7 +28,7 @@
      (let ((dataset (load-dataset dataset-name)))
        (setf *fitness-fn* 
 	     (lambda (team)
-	       (accuracy team dataset)))))))
+	       (accuracy team (sample dataset))))))))
   
 (defun safe-evaluate-team (team)
   (cons team

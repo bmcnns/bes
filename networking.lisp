@@ -160,20 +160,25 @@
 (defun send-migrant-over-socket (island-id root-team)
   "Sends a TEAM to island ISLAND-ID through a TCP socket.
    Notifies the telemetry client that a migrant was sent over UDP."
-  (let ((receiver-ip-address (lookup-island-ip-by-id island-id)))
-    (handler-case
-	(progn
-	  (usocket:with-client-socket (socket stream receiver-ip-address 8080)
-	    (prin1 `(:type :migrant
-		     :from ,(who-am-i)
-		     :ts ,(get-universal-time)
-		     :team ,(serialize-team root-team))
-		   stream)
-	    (finish-output stream))
-	  ;; Notify the telemetry client over UDP that a migrant was sent.
-	  (emit-message (format nil "Migrant was sent to island ~A.~%" island-id)))
-      (error (e)
-	(emit-error (format nil "Failed to send migrant to ~A: ~A~%" island-id e))))))
+  (let ((receiver-ip-address (lookup-island-ip-by-id island-id))
+	(sender-id (who-am-i))
+	(serialized-team (serialize-team root-team)))
+    (bt:make-thread
+     (lambda ()
+       (handler-case
+	   (progn
+	     (usocket:with-client-socket (socket stream receiver-ip-address 8080 :timeout 30)
+	       (prin1 `(:type :migrant
+			:from ,sender-id
+			:ts ,(get-universal-time)
+			:team ,serialized-team)
+		      stream)
+	       (finish-output stream))
+	     ;; Notify the telemetry client over UDP that a migrant was sent.
+	     (emit-message (format nil "Migrant was sent to island ~A.~%" island-id)))
+	 (error (e)
+	   (emit-error (format nil "Failed to send migrant to ~A: ~A~%" island-id e)))))
+     :name (format nil "migrant-sender-to~A" island-id))))
 
 (defun receive-migrant-over-socket (msg)
   (when *running*

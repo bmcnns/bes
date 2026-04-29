@@ -1,6 +1,6 @@
 (in-package :bes)
 
-(defconstant +num-threads+ 160
+(defconstant +num-threads+ 140
   "The number of CPU cores available for multi-threading.")
 
 (defconstant +num-registers+ 8

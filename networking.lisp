@@ -12,7 +12,7 @@
 (defparameter *telemetry-ip* "129.173.22.24"
   "IP address of the emacs client receiving telemetry.")
 
-(defparameter *heartbeat-interval* 30
+(defparameter *heartbeat-interval* 300
   "The amount of time to wait between sending heartbeats (in seconds).")
 
 (defparameter *islands*

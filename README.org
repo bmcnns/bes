@@ -59,6 +59,25 @@ its individuals to we encourage niche-ing or local competition leading to better
 A: TPG individuals can get large and sending an entire population back and forth over the network introduces overhead. This overhead
 can actually take longer than the fitness evaluation itself.
 
+** File Structure
+
+| File             | Purpose                                                                                                                |
+| emacs/bes.el     | Everything related to the Emacs package is here including the transient menu for starting searches, stopping searches. |
+| action.lisp      | Defines what an action is: either an atomic action or a reference to another team.                                     |
+| bes.asd          | ASDF package definition i.e. telling Quicklisp what dependencies are needed to load BES.                               |
+| dataset.lisp     | Everything related to datasets including how to load and use them efficiently.                                         |
+| globals.lisp     | Key global variables all in one place. Dynamically set by the Emacs client through the search menu                     |
+| helpers.lisp     | Useful utility functions                                                                                               |
+| instruction.lisp | The basic unit of any program stored as an efficient representation.                                                   |
+| learner.lisp     | The combination of (program, action) pairs.                                                                            |
+| main.lisp        | Everything to do with the actual evolution/generational loop.                                                          |
+| migration.lisp   | When teams are received over TCP, they are added to and processed from thread-safe queues defined here.                |
+| mutation.lisp    | All the mutation of teams and learners are defined here.                                                               |
+| networking.lisp  | All socket-based communication from Emacs to BES or from BES node to BES node is implemented here.                     |
+| package.lisp     | Defines what functions are public/private and the order in which to load files during (ql:quickload)                   |
+| program.lisp     | The very fast execution engine for running programs on data                                                            |
+| team.lisp        | A team is a candidate solution or part of a candidate solution to the task.                                            |
+
 * Key settings you need to change
 
 1.)

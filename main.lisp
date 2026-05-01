@@ -12,7 +12,6 @@
   (setf *teams* (loop repeat *population-size*
 			   collect (make-team))))
 
-
 (defun accuracy (team dataset)
   (let ((predictions (execute-team-on-dataset team dataset))
 	(actuals (actions dataset)))

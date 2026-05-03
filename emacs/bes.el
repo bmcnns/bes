@@ -289,6 +289,10 @@
   (setq bes-refresh-timer
 	(run-at-time 0 1
 		     (lambda ()
+		       (let ((buf (get-buffer "*bes-log*")))
+			 (when (buffer-live-p buf)
+			   (with-current-buffer buf
+			     (goto-char (point-max)))))
 		       (let ((buf (get-buffer "*bes*")))
 			 (when (buffer-live-p buf)
 			   (with-current-buffer buf

@@ -137,6 +137,7 @@
 		    (loop while *running*
 			  do (evolve)
 			  do (incf *generation*))
+		 (setf *running* nil)
 		 (lparallel:end-kernel))))
 	   :name "search-thread")
 	  *server-threads*)))

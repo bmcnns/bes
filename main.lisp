@@ -113,19 +113,10 @@
   "Search the solution space with a tangled program graph."
   (let* ((seed (seed-or-random-seed seed))
 	 (captured-state (sb-ext:seed-random-state seed)))
-    
     (setf *random-state* captured-state)
 
-    (when *running*
-      (emit-error "A search is already running on this node.")
-      (return-from run-search))
-
     (setf *teams* nil)
-    (setf *running* t)
     (setf *generation* 1)
-    
-    ;; enable multi-threading
-    (setf lparallel:*kernel* (make-kernel +num-threads+))
     
     ;; make the initial population
     (make-initial-population)
@@ -134,17 +125,9 @@
       (:online (make-fitness-function :gym-environment-name gym-environment-name))
       (:offline (make-fitness-function :dataset-name dataset-name)))
 
-    (push (bt:make-thread
-	   (lambda ()
-	     (let ((*random-state* (make-random-state captured-state)))
-	       (unwind-protect
-		    (loop while *running*
-			  do (evolve)
-			  do (incf *generation*))
-		 (setf *running* nil)
-		 (lparallel:end-kernel))))
-	   :name "search-thread")
-	  *server-threads*)))
+    (loop while *running*
+	  do (evolve)
+	  do (incf *generation*))))
 
 		   
 					     

@@ -282,8 +282,25 @@
 	    p-mut-constant p-mut-constant-sign
 	    migration-interval
 	    batch-size)
-	  (emit-message (format nil "Search started on island ~A~%" (who-am-i)))
-	  (run-search mode gym-environment-name dataset-name seed))
+	  (setf *running* t)
+
+	  (push 
+	   (bt:make-thread
+	    (lambda ()
+	      (unwind-protect 
+		   (handler-case
+		       (progn
+			 (emit-message (format nil "Search started on island ~A~%" (who-am-i)))
+			 ;; enable multi-threading
+			 (setf lparallel:*kernel* (make-kernel +num-threads+))
+			 (run-search mode gym-environment-name dataset-name seed))
+		     (error (c)
+		       (setf *running* nil)
+		       (emit-error (format nil "Search crashed: ~A" c))))
+		(setf *running* nil)
+		(lparallel:end-kernel)))
+	    :name "search-thread")
+	   *server-threads*))
 	(emit-error "The search parameters provided are invalid."))))
 
 (defun handle-stop-search ()

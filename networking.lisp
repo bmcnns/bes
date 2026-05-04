@@ -292,7 +292,7 @@
 		       (progn
 			 (emit-message (format nil "Search started on island ~A~%" (who-am-i)))
 			 ;; enable multi-threading
-			 (setf lparallel:*kernel* (make-kernel +num-threads+))
+			 (setf lparallel:*kernel* (make-kernel *num-threads*))
 			 (run-search mode gym-environment-name dataset-name seed))
 		     (error (c)
 		       (setf *running* nil)

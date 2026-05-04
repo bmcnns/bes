@@ -129,7 +129,7 @@ Each node in my compute cluster has 160 CPU cores. In order to leave some cores 
 You can adjust the number of threads (multi-threading is used for fast fitness evaluation) in /globals.lisp/ by setting:
 
 #+BEGIN_SRC lisp
-+num-threads+
+*num-threads*
 #+END_SRC
 
 5.)

@@ -40,6 +40,21 @@ You can make a symlink from your repository to this location with the following:
   ln -s /fully/expanded/path/to/your/repos/bes /fully/expanded/path/to/your/quicklisp/local-projects/
 #+END_SRC
 
+*** Setting up Python and Gymnasium environments.
+
+This repository automatically bridges to Python to interact with Gymnasium through py4cl2.
+In order to use a different Python binary than your system-level Python:
+
+#+BEGIN_SRC lisp
+  (setf (py4cl2:config-var 'py4cl2:pycmd) "/path/to/your/python/binary")
+  (py4cl2:save-config)
+  (py4cl2:pystop)
+  (py4cl2:pystart)
+#+END_SRC
+
+You have to do the above only once in your REPL to point the Python binary from the system python
+to whatever python binary you want to use. This is a persistent change.
+
 *** Author's note on the distributed computing aspect of this system.
 
 As mentioned earlier, this system is distributed and *decentralized* by design.

@@ -225,7 +225,7 @@
    ("-M" "Evaluation Mode" "--mode="
     :choices ("online" "offline"))
    ("-G" "Gymnasium Environment Name" "*env="
-    :choices ("none" "Hopper-v5" "Walker2d-v5" "HalfCheetah-v5"))
+    :choices ("none" "Hopper-v5" "Walker2d-v5" "HalfCheetah-v5" "Acrobot-v1" "LunarLander-v3" "MountainCar-v0" "CartPole-v1"))
    ("-F" "Dataset Name" "*dataset=")]
   ["Key Settings"
    ("-Z" "Number of Observations" "*num-observations=")

@@ -22,7 +22,10 @@
 	  
 (defun make-fitness-function (&key gym-environment-name dataset-name)
   (cond
-    (gym-environment-name (error "Online evaluation is not implemented yet."))
+    (gym-environment-name
+     (setf *fitness-fn*
+	   (lambda (team)
+	     (bes-gym:rollout team gym-environment-name (random 9999999)))))
     (dataset-name
      (let ((dataset (load-dataset dataset-name)))
        (setf *fitness-fn* 
@@ -128,6 +131,7 @@
     (make-initial-population)
 
     (ecase mode
+      (:online (make-fitness-function :gym-environment-name gym-environment-name))
       (:offline (make-fitness-function :dataset-name dataset-name)))
 
     (push (bt:make-thread
